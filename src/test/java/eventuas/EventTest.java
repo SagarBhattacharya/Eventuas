@@ -119,4 +119,20 @@ class EventTest extends IntegrationTest {
 				.with(intruder.jwtPostProcessor()))
 			.andExpect(status().isForbidden());
 	}
+
+	@Test
+	void closingEventCascadesClosureToAllActiveTiers() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		String eventId = harness.createPublishedEvent(organizer, "Cascade Closure Conf");
+		String tierA = harness.createTier(organizer, eventId, "General", 1000, 20);
+		String tierB = harness.createTier(organizer, eventId, "VIP", 3000, 10);
+
+		harness.closeEvent(organizer, eventId);
+
+		mvc.perform(get("/events/{eventId}/tiers", eventId)
+				.with(organizer.jwtPostProcessor()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[?(@.id == '" + tierA + "')].status").value("CLOSED"))
+			.andExpect(jsonPath("$[?(@.id == '" + tierB + "')].status").value("CLOSED"));
+	}
 }

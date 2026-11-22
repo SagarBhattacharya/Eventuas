@@ -9,6 +9,7 @@ import eventuas.ticket_tier.TierStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,6 +47,12 @@ public class TicketService {
 
 		if (event.status() != EventStatus.ACTIVE) {
 			throw new AppException.EventNotActive();
+		}
+
+		Instant now = Instant.now();
+		if ((event.salesStartDate() != null && now.isBefore(event.salesStartDate()))
+			|| (event.salesEndDate() != null && now.isAfter(event.salesEndDate()))) {
+			throw new AppException.SalesNotOpen();
 		}
 
 		int updated = ticketTierRepository.decrementStock(tierId);

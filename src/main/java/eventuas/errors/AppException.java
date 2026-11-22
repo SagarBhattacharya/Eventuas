@@ -88,4 +88,10 @@ public sealed abstract class AppException extends RuntimeException {
 			super("Ticket has already been checked in.");
 		}
 	}
+
+	public static final class SalesNotOpen extends AppException {
+		public SalesNotOpen() {
+			super("Ticket sales are not currently open for this event.");
+		}
+	}
 }

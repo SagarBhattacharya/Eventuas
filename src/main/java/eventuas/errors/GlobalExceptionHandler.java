@@ -24,7 +24,8 @@ public class GlobalExceptionHandler {
 					 AppException.EventNotActive _,
 					 AppException.TierSoldOut _,
 					 AppException.StaffAlreadyAssigned _,
-					 AppException.TicketAlreadyCheckedIn _ -> HttpStatus.CONFLICT;
+					 AppException.TicketAlreadyCheckedIn _,
+					 AppException.SalesNotOpen _ -> HttpStatus.CONFLICT;
 			case AppException.InvalidQrToken _ -> HttpStatus.BAD_REQUEST;
 		};
 		return ProblemDetail.forStatusAndDetail(status, ex.getMessage());

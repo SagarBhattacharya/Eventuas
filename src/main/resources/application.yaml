@@ -2,6 +2,10 @@ spring:
   application:
     name: eventuas
 
+  config:
+    import:
+      - optional:file:./development.env[.properties]
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/eventuas}
     username: ${DB_USER:eventuas}
@@ -15,12 +19,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:9090
-
-  config:
-    import:
-      - optional:file:development.env
+          issuer-uri: ${ISSUER_URI:http://localhost:9090}
 
 app:
   qr:
-    secret: ${APP_QR_SECRET}
+    secret: ${APP_QR_SECRET:dev-only-insecure-secret-change-in-prod-32b}

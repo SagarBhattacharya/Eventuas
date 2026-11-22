@@ -6,6 +6,10 @@ spring:
           issuer-uri:
           jwk-set-uri:
 
+  config:
+    import:
+      - optional:file:./development.env[.properties]
+
 app:
   qr:
-    secret: ${APP_QR_SECRET}
+    secret: ${APP_QR_SECRET:dev-only-insecure-secret-change-in-prod-32b}

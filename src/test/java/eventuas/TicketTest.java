@@ -6,8 +6,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -140,5 +143,60 @@ class TicketTest extends IntegrationTest {
 
 		assertThat(persistedTickets).isEqualTo(5);
 		assertThat(remainingQty).isEqualTo(0L);
+	}
+
+	@Test
+	void rejectsPurchaseOutsideEventSalesWindow() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		var buyer = TestUser.random("Buyer");
+		Instant eventStart = Instant.now().plus(10, ChronoUnit.DAYS);
+
+		// 1. Sales have not started yet
+		String upcomingResp = harness.postJson("/events", organizer, Map.of(
+				"name", "Future Sales Conf",
+				"description", "Sales open tomorrow",
+				"venue", "Main Hall",
+				"startDate", eventStart.toString(),
+				"endDate", eventStart.plus(3, ChronoUnit.HOURS).toString(),
+				"salesStartDate", Instant.now().plus(1, ChronoUnit.DAYS).toString(),
+				"salesEndDate", Instant.now().plus(5, ChronoUnit.DAYS).toString()
+			))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		String upcomingEventId = new tools.jackson.databind.ObjectMapper()
+			.readTree(upcomingResp).get("id").asString();
+		harness.publishEvent(organizer, upcomingEventId);
+		String upcomingTierId = harness.createTier(organizer, upcomingEventId, "Early", 1000, 10);
+
+		mvc.perform(post("/tiers/{tierId}/buy", upcomingTierId)
+				.with(buyer.jwtPostProcessor()))
+			.andExpect(status().isConflict());
+
+		// 2. Sales window has already ended
+		String expiredResp = harness.postJson("/events", organizer, Map.of(
+				"name", "Ended Sales Conf",
+				"description", "Sales closed yesterday",
+				"venue", "Main Hall",
+				"startDate", eventStart.toString(),
+				"endDate", eventStart.plus(3, ChronoUnit.HOURS).toString(),
+				"salesStartDate", Instant.now().minus(5, ChronoUnit.DAYS).toString(),
+				"salesEndDate", Instant.now().minus(1, ChronoUnit.HOURS).toString()
+			))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		String expiredEventId = new tools.jackson.databind.ObjectMapper()
+			.readTree(expiredResp).get("id").asString();
+		harness.publishEvent(organizer, expiredEventId);
+		String expiredTierId = harness.createTier(organizer, expiredEventId, "Standard", 1500, 10);
+
+		mvc.perform(post("/tiers/{tierId}/buy", expiredTierId)
+				.with(buyer.jwtPostProcessor()))
+			.andExpect(status().isConflict());
 	}
 }

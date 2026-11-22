@@ -27,4 +27,14 @@ public interface TicketTierRepository extends CrudRepository<TicketTier, UUID> {
 			AND available_qty > 0
 		""")
 	int decrementStock(UUID tierId);
+
+	@Modifying
+	@Query("""
+		UPDATE ticket_tiers SET
+			status = 'CLOSED',
+			updated_at = now()
+		WHERE event_id = :eventId
+			AND status = 'ACTIVE'
+		""")
+	int closeAllActiveByEventId(UUID eventId);
 }
