@@ -3,12 +3,11 @@ package eventuas.ticket;
 import eventuas.check_in.QrSigner;
 import eventuas.errors.AppException;
 import eventuas.event.EventRepository;
-import eventuas.event.EventStatus;
 import eventuas.ticket_tier.TicketTierRepository;
-import eventuas.ticket_tier.TierStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -20,62 +19,51 @@ public class TicketService {
 	private final TicketTierRepository ticketTierRepository;
 	private final TicketRepository ticketRepository;
 	private final QrSigner qrSigner;
+	private final Clock clock;
 
 	public TicketService(
 		EventRepository eventRepository,
 		TicketTierRepository ticketTierRepository,
 		TicketRepository ticketRepository,
-		QrSigner qrSigner
+		QrSigner qrSigner,
+		Clock clock
 	) {
 		this.eventRepository = eventRepository;
 		this.ticketTierRepository = ticketTierRepository;
 		this.ticketRepository = ticketRepository;
 		this.qrSigner = qrSigner;
+		this.clock = clock;
 	}
 
 	@Transactional
 	public Ticket buyTicket(UUID buyerId, UUID tierId) {
 		var tier = ticketTierRepository.findById(tierId)
 			.orElseThrow(AppException.TierNotFound::new);
-
-		if (tier.status() == TierStatus.CLOSED) {
-			throw new AppException.TierAlreadyClosed();
-		}
+		tier.ensurePurchasable();
 
 		var event = eventRepository.findById(tier.eventId())
 			.orElseThrow(AppException.EventNotFound::new);
 
-		if (event.status() != EventStatus.ACTIVE) {
-			throw new AppException.EventNotActive();
-		}
-
-		Instant now = Instant.now();
-		if ((event.salesStartDate() != null && now.isBefore(event.salesStartDate()))
-			|| (event.salesEndDate() != null && now.isAfter(event.salesEndDate()))) {
-			throw new AppException.SalesNotOpen();
-		}
+		Instant now = clock.instant();
+		event.ensureOpenForSales(now);
 
 		int updated = ticketTierRepository.decrementStock(tierId);
 		if (updated == 0) {
 			throw new AppException.TierSoldOut();
 		}
 
-		var ticket = Ticket.issue(buyerId, tierId);
-		return ticketRepository.save(ticket);
+		return ticketRepository.save(Ticket.issue(buyerId, tierId, now));
 	}
 
 	public List<Ticket> listByBuyer(UUID buyerId) {
 		return ticketRepository.findByPurchasedByOrderByCreatedAtDesc(buyerId);
 	}
 
-	public QrTokenResponse issueQrToken(UUID buyerId, UUID ticketId) {
+	public String issueQrToken(UUID buyerId, UUID ticketId) {
 		var ticket = ticketRepository.findById(ticketId)
 			.orElseThrow(AppException.TicketNotFound::new);
 
-		if (!buyerId.equals(ticket.purchasedBy())) {
-			throw new AppException.TicketNotOwned();
-		}
-
-		return new QrTokenResponse(qrSigner.sign(ticket.id()));
+		ticket.ensureOwnedBy(buyerId);
+		return qrSigner.sign(ticket.id());
 	}
 }

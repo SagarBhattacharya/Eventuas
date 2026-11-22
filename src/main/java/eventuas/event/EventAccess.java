@@ -23,11 +23,7 @@ public class EventAccess {
 	public Event requireOwned(UUID organizerId, UUID eventId, String action) {
 		var event = eventRepository.findById(eventId)
 			.orElseThrow(AppException.EventNotFound::new);
-
-		if (!organizerId.equals(event.organizerId())) {
-			throw new AppException.EventNotAuthorized(action);
-		}
-
+		event.ensureOwnedBy(organizerId, action);
 		return event;
 	}
 
@@ -36,12 +32,12 @@ public class EventAccess {
 			.orElseThrow(AppException.EventNotFound::new);
 
 		boolean isOwner = userId.equals(event.organizerId());
-		boolean isStaff = !isOwner && eventStaffRepository.existsByEventIdAndUserId(eventId, userId);
+		boolean isStaff = !isOwner &&
+			eventStaffRepository.existsByEventIdAndUserId(eventId, userId);
 
 		if (!isOwner && !isStaff) {
 			throw new AppException.EventNotAuthorized(action);
 		}
-
 		return event;
 	}
 }

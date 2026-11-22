@@ -19,6 +19,9 @@ public class QrSigner {
 	private final SecretKeySpec keySpec;
 
 	public QrSigner(@Value("${app.qr.secret}") String secret) {
+		if (secret == null || secret.isBlank()) {
+			throw new IllegalArgumentException("app.qr.secret must not be blank");
+		}
 		this.keySpec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_ALG);
 	}
 

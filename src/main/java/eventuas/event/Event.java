@@ -3,8 +3,6 @@ package eventuas.event;
 import eventuas.errors.AppException;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -20,10 +18,16 @@ public record Event(
 	Instant salesStartDate,
 	Instant salesEndDate,
 	UUID organizerId,
-	EventStatus status,
+	Status status,
 	Instant createdAt,
 	Instant updatedAt
 ) {
+	public enum Status {
+		DRAFT,
+		ACTIVE,
+		CLOSED
+	}
+
 	public static Event draft(
 		String name,
 		String description,
@@ -32,35 +36,95 @@ public record Event(
 		Instant endDate,
 		Instant salesStartDate,
 		Instant salesEndDate,
-		UUID organizerId
+		UUID organizerId,
+		Instant now
 	) {
-		Instant now = Instant.now();
+		if (!endDate.isAfter(startDate)) {
+			throw new AppException.InvalidEventWindow();
+		}
+		if (salesStartDate != null && salesEndDate != null
+			&& !salesEndDate.isAfter(salesStartDate)) {
+			throw new AppException.InvalidSalesWindow();
+		}
+
 		return new Event(
-			null, name, description, venue,
-			startDate, endDate, salesStartDate, salesEndDate,
-			organizerId, EventStatus.DRAFT, now, now
+			null,
+			name,
+			description,
+			venue,
+			startDate,
+			endDate,
+			salesStartDate,
+			salesEndDate,
+			organizerId,
+			Status.DRAFT,
+			now,
+			now
 		);
 	}
 
-	public Event publish() {
-		if (this.status != EventStatus.DRAFT) {
-			throw new AppException.EventNotPublishable(this.status.toString());
+	public Event publish(Instant now) {
+		if (this.status != Status.DRAFT) {
+			throw new AppException.EventNotPublishable(this.status.name());
 		}
-		return withStatus(EventStatus.ACTIVE);
+		return withStatus(Status.ACTIVE, now);
 	}
 
-	public Event close() {
-		if (this.status == EventStatus.CLOSED) {
+	public Event close(Instant now) {
+		if (this.status == Status.CLOSED) {
 			throw new AppException.EventAlreadyClosed();
 		}
-		return withStatus(EventStatus.CLOSED);
+		return withStatus(Status.CLOSED, now);
 	}
 
-	private Event withStatus(EventStatus nextStatus) {
+	public void ensureOwnedBy(UUID userId, String action) {
+		if (!this.organizerId.equals(userId)) {
+			throw new AppException.EventNotAuthorized(action);
+		}
+	}
+
+	public void ensureAllowsTierManagement() {
+		if (this.status == Status.CLOSED) {
+			throw new AppException.EventAlreadyClosed();
+		}
+	}
+
+	public void ensureOpenForSales(Instant now) {
+		if (this.status != Status.ACTIVE) {
+			throw new AppException.EventNotActive();
+		}
+		if ((salesStartDate != null && now.isBefore(salesStartDate))
+			|| (salesEndDate != null && now.isAfter(salesEndDate))) {
+			throw new AppException.SalesNotOpen();
+		}
+	}
+
+	public void ensureOpenForCheckIn() {
+		if (this.status != Status.ACTIVE) {
+			throw new AppException.EventNotActive();
+		}
+	}
+
+	public void ensureOpenToPublic() {
+		if (this.status == Event.Status.DRAFT) {
+			throw new AppException.EventNotFound();
+		}
+	}
+
+	private Event withStatus(Status nextStatus, Instant now) {
 		return new Event(
-			id, name, description, venue,
-			startDate, endDate, salesStartDate, salesEndDate,
-			organizerId, nextStatus, createdAt, Instant.now()
+			id,
+			name,
+			description,
+			venue,
+			startDate,
+			endDate,
+			salesStartDate,
+			salesEndDate,
+			organizerId,
+			nextStatus,
+			createdAt,
+			now
 		);
 	}
 }

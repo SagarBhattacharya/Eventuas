@@ -119,4 +119,22 @@ public sealed abstract class AppException extends RuntimeException {
 			);
 		}
 	}
+
+	public static final class InvalidEventWindow extends AppException {
+		public InvalidEventWindow() {
+			super(
+				ErrorCode.VALIDATION_ERROR,
+				"Event end date must be after start date."
+			);
+		}
+	}
+
+	public static final class InvalidSalesWindow extends AppException {
+		public InvalidSalesWindow() {
+			super(
+				ErrorCode.VALIDATION_ERROR,
+				"Sales end date must be after sales start date."
+			);
+		}
+	}
 }

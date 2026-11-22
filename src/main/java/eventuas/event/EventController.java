@@ -1,5 +1,6 @@
 package eventuas.event;
 
+import eventuas.user.CurrentUser;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,40 +23,56 @@ public class EventController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public Event create(
-		@AuthenticationPrincipal Jwt jwt,
-		@Valid @RequestBody CreateEventRequest request
+	public EventDto.Response create(
+		@CurrentUser UUID userId,
+		@Valid @RequestBody EventDto.CreateRequest request
 	) {
-		var userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
-		return eventService.createDraft(userId, request);
+		var event = eventService.createDraft(
+			userId,
+			request.name().trim(),
+			request.description().trim(),
+			request.venue().trim(),
+			request.startDate(),
+			request.endDate(),
+			request.salesStartDate(),
+			request.salesEndDate()
+		);
+		return EventDto.Response.from(event);
 	}
 
 	@GetMapping
-	public List<Event> listOwned(@AuthenticationPrincipal Jwt jwt) {
-		var userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
-		return eventService.listByOrganizer(userId);
+	public List<EventDto.Response> listOwned(
+		@CurrentUser UUID userId
+	) {
+		return eventService.listByOrganizer(userId).stream()
+			.map(EventDto.Response::from)
+			.toList();
 	}
 
 	@GetMapping("/published")
-	public List<Event> listPublished() {
-		return eventService.listPublished();
+	public List<EventDto.Response> listPublished() {
+		return eventService.listPublished().stream()
+			.map(EventDto.Response::from)
+			.toList();
 	}
 
 	@PostMapping("/{eventId}/publish")
-	public Event publish(
-		@AuthenticationPrincipal Jwt jwt,
+	public EventDto.Response publish(
+		@CurrentUser UUID userId,
 		@PathVariable UUID eventId
 	) {
-		var userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
-		return eventService.publish(userId, eventId);
+		return EventDto.Response.from(
+			eventService.publish(userId, eventId)
+		);
 	}
 
 	@PostMapping("/{eventId}/close")
-	public Event close(
-		@AuthenticationPrincipal Jwt jwt,
+	public EventDto.Response close(
+		@CurrentUser UUID userId,
 		@PathVariable UUID eventId
 	) {
-		var userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
-		return eventService.close(userId, eventId);
+		return EventDto.Response.from(
+			eventService.close(userId, eventId)
+		);
 	}
 }

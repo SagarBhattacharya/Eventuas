@@ -1,13 +1,11 @@
 package eventuas.ticket_tier;
 
+import eventuas.user.CurrentUser;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -22,36 +20,50 @@ public class TicketTierController {
 
 	@PostMapping("/{eventId}/tiers")
 	@ResponseStatus(HttpStatus.CREATED)
-	public TicketTier create(
-		@AuthenticationPrincipal Jwt jwt,
+	public TicketTierDto.Response create(
+		@CurrentUser UUID userId,
 		@PathVariable UUID eventId,
-		@Valid @RequestBody CreateTicketTierRequest request
+		@Valid @RequestBody TicketTierDto.CreateRequest request
 	) {
-		var userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
-		return ticketTierService.createTier(userId, eventId, request);
+		var created = ticketTierService.createTier(
+			userId,
+			eventId,
+			request.tier().trim(),
+			request.description().trim(),
+			request.availableQty(),
+			request.price(),
+			request.currency()
+		);
+		return TicketTierDto.Response.from(created);
 	}
 
 	@GetMapping("/{eventId}/tiers")
-	public List<TicketTier> listOwned(
-		@AuthenticationPrincipal Jwt jwt,
+	public List<TicketTierDto.Response> listOwned(
+		@CurrentUser UUID userId,
 		@PathVariable UUID eventId
 	) {
-		var userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
-		return ticketTierService.listByOwnedEvent(userId, eventId);
+		return ticketTierService.listByOwnedEvent(userId, eventId)
+			.stream()
+			.map(TicketTierDto.Response::from)
+			.toList();
 	}
 
 	@PostMapping("/{eventId}/tiers/{tierId}/close")
-	public TicketTier close(
-		@AuthenticationPrincipal Jwt jwt,
+	public TicketTierDto.Response close(
+		@CurrentUser UUID userId,
 		@PathVariable UUID eventId,
 		@PathVariable UUID tierId
 	) {
-		var userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
-		return ticketTierService.closeTier(userId, eventId, tierId);
+		return TicketTierDto.Response.from(
+			ticketTierService.closeTier(userId, eventId, tierId)
+		);
 	}
 
 	@GetMapping("/published/{eventId}/tiers")
-	public List<TicketTier> listPublished(@PathVariable UUID eventId) {
-		return ticketTierService.listPublicTiers(eventId);
+	public List<TicketTierDto.Response> listPublished(@PathVariable UUID eventId) {
+		return ticketTierService.listPublicTiers(eventId)
+			.stream()
+			.map(TicketTierDto.Response::from)
+			.toList();
 	}
 }

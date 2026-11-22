@@ -12,7 +12,12 @@ public interface TicketTierRepository extends CrudRepository<TicketTier, UUID> {
 
 	List<TicketTier> findByEventIdOrderByCreatedAtAsc(UUID eventId);
 
-	@Query("SELECT * FROM ticket_tiers WHERE event_id = :eventId AND status = 'ACTIVE' ORDER BY price")
+	@Query("""
+		SELECT * FROM ticket_tiers
+		WHERE event_id = :eventId
+			AND status = 'ACTIVE'
+		ORDER BY price
+	""")
 	List<TicketTier> findActiveByEventId(UUID eventId);
 
 	Optional<TicketTier> findByIdAndEventId(UUID id, UUID eventId);

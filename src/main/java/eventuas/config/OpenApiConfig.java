@@ -1,6 +1,7 @@
 package eventuas.config;
 
 import eventuas.errors.ApiErrorResponse;
+import eventuas.user.CurrentUser;
 import io.swagger.v3.core.converter.ModelConverters;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -21,7 +22,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 public class OpenApiConfig {
 
 	static {
-		SpringDocUtils.getConfig().addRequestWrapperToIgnore(Jwt.class);
+		SpringDocUtils.getConfig()
+			.addRequestWrapperToIgnore(Jwt.class)
+			.addAnnotationsToIgnore(CurrentUser.class);
 	}
 
 	@Bean

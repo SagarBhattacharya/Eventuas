@@ -7,6 +7,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,15 +17,18 @@ public class EventStaffService {
 	private final EventAccess eventAccess;
 	private final UserRepository userRepository;
 	private final EventStaffRepository eventStaffRepository;
+	private final Clock clock;
 
 	public EventStaffService(
 		EventAccess eventAccess,
 		UserRepository userRepository,
-		EventStaffRepository eventStaffRepository
+		EventStaffRepository eventStaffRepository,
+		Clock clock
 	) {
 		this.eventAccess = eventAccess;
 		this.userRepository = userRepository;
 		this.eventStaffRepository = eventStaffRepository;
+		this.clock = clock;
 	}
 
 	@Transactional
@@ -35,7 +39,9 @@ public class EventStaffService {
 			.orElseThrow(AppException.UserNotFound::new);
 
 		try {
-			return eventStaffRepository.save(EventStaff.assign(eventId, staffUser.id()));
+			return eventStaffRepository.save(
+				EventStaff.assign(eventId, staffUser.id(), clock.instant())
+			);
 		} catch (DataIntegrityViolationException ex) {
 			throw new AppException.StaffAlreadyAssigned();
 		}

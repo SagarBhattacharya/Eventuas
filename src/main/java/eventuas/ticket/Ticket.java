@@ -1,5 +1,6 @@
 package eventuas.ticket;
 
+import eventuas.errors.AppException;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -14,8 +15,13 @@ public record Ticket(
 	Instant createdAt,
 	Instant updatedAt
 ) {
-	public static Ticket issue(UUID purchasedBy, UUID tierId) {
-		Instant now = Instant.now();
+	public static Ticket issue(UUID purchasedBy, UUID tierId, Instant now) {
 		return new Ticket(null, purchasedBy, tierId, now, now);
+	}
+
+	public void ensureOwnedBy(UUID userId) {
+		if (!this.purchasedBy.equals(userId)) {
+			throw new AppException.TicketNotOwned();
+		}
 	}
 }

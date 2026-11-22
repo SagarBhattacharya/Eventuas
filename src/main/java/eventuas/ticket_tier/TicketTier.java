@@ -15,20 +15,28 @@ public record TicketTier(
 	long availableQty,
 	long price,
 	String currency,
-	TierStatus status,
+	Status status,
 	UUID eventId,
 	Instant createdAt,
 	Instant updatedAt
 ) {
+	public enum Status {
+		ACTIVE,
+		CLOSED
+	}
+
 	public static TicketTier create(
 		String tier,
 		String description,
 		long availableQty,
 		long price,
 		String currency,
-		UUID eventId
+		UUID eventId,
+		Instant now
 	) {
-		Instant now = Instant.now();
+		if (availableQty <= 0 || price < 0) {
+			throw new IllegalArgumentException("Invalid tier quantity or price");
+		}
 		return new TicketTier(
 			null,
 			tier,
@@ -36,15 +44,15 @@ public record TicketTier(
 			availableQty,
 			price,
 			currency,
-			TierStatus.ACTIVE,
+			Status.ACTIVE,
 			eventId,
 			now,
 			now
 		);
 	}
 
-	public TicketTier close() {
-		if (this.status == TierStatus.CLOSED) {
+	public TicketTier close(Instant now) {
+		if (this.status == Status.CLOSED) {
 			throw new AppException.TierAlreadyClosed();
 		}
 		return new TicketTier(
@@ -54,10 +62,19 @@ public record TicketTier(
 			availableQty,
 			price,
 			currency,
-			TierStatus.CLOSED,
+			Status.CLOSED,
 			eventId,
 			createdAt,
-			Instant.now()
+			now
 		);
+	}
+
+	public void ensurePurchasable() {
+		if (this.status != Status.ACTIVE) {
+			throw new AppException.TierAlreadyClosed();
+		}
+		if (this.availableQty <= 0) {
+			throw new AppException.TierSoldOut();
+		}
 	}
 }

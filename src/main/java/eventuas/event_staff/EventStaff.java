@@ -13,7 +13,7 @@ public record EventStaff(
 	UUID userId,
 	Instant createdAt
 ) {
-	public static EventStaff assign(UUID eventId, UUID userId) {
-		return new EventStaff(null, eventId, userId, Instant.now());
+	public static EventStaff assign(UUID eventId, UUID userId, Instant now) {
+		return new EventStaff(null, eventId, userId, now);
 	}
 }

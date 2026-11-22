@@ -30,7 +30,9 @@ public class GlobalExceptionHandler {
 					 AppException.StaffAlreadyAssigned _,
 					 AppException.TicketAlreadyCheckedIn _,
 					 AppException.SalesNotOpen _ -> HttpStatus.CONFLICT;
-			case AppException.InvalidQrToken _ -> HttpStatus.BAD_REQUEST;
+			case AppException.InvalidQrToken _,
+					 AppException.InvalidSalesWindow _,
+					 AppException.InvalidEventWindow _ -> HttpStatus.BAD_REQUEST;
 		};
 		return problem(status, ex.code(), ex.getMessage());
 	}
