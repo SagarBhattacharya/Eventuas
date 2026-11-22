@@ -28,6 +28,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
+	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
 	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 
 	runtimeOnly("org.postgresql:postgresql")

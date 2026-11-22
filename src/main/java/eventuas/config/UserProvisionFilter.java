@@ -1,4 +1,4 @@
-package eventuas.security;
+package eventuas.config;
 
 import eventuas.user.UserRepository;
 import jakarta.servlet.FilterChain;
