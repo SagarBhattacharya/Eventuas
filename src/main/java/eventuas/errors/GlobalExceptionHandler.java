@@ -3,8 +3,12 @@ package eventuas.errors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.sql.SQLException;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -28,18 +32,32 @@ public class GlobalExceptionHandler {
 					 AppException.SalesNotOpen _ -> HttpStatus.CONFLICT;
 			case AppException.InvalidQrToken _ -> HttpStatus.BAD_REQUEST;
 		};
-		return ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+		return problem(status, ex.code(), ex.getMessage());
+	}
+
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ProblemDetail handleValidation(MethodArgumentNotValidException ex) {
+		String detail = ex.getBindingResult().getFieldErrors().stream()
+			.map(err -> err.getField() + ": " + err.getDefaultMessage())
+			.collect(Collectors.joining("; "));
+		return problem(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, detail);
 	}
 
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	public ProblemDetail handleDataIntegrity(DataIntegrityViolationException ex) {
-		Throwable cause = ex.getMostSpecificCause();
-		if (cause instanceof java.sql.SQLException sqlEx && "23505".equals(sqlEx.getSQLState())) {
-			return ProblemDetail.forStatusAndDetail(
+		if (ex.getMostSpecificCause() instanceof SQLException sqlEx && "23505".equals(sqlEx.getSQLState())) {
+			return problem(
 				HttpStatus.CONFLICT,
+				ErrorCode.DUPLICATE_TIER_NAME,
 				"An active tier with this name already exists for this event."
 			);
 		}
-		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid data constraint.");
+		return problem(HttpStatus.BAD_REQUEST, ErrorCode.DATA_INTEGRITY_VIOLATION, "Invalid data constraint.");
+	}
+
+	private static ProblemDetail problem(HttpStatus status, ErrorCode code, String detail) {
+		ProblemDetail pd = ProblemDetail.forStatusAndDetail(status, detail);
+		pd.setProperty("code", code);
+		return pd;
 	}
 }

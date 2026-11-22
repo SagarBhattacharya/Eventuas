@@ -1,0 +1,25 @@
+package eventuas.errors;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "Machine-readable domain and protocol error codes")
+public enum ErrorCode {
+	USER_NOT_FOUND,
+	EVENT_NOT_FOUND,
+	EVENT_NOT_AUTHORIZED,
+	EVENT_NOT_PUBLISHABLE,
+	EVENT_ALREADY_CLOSED,
+	EVENT_NOT_ACTIVE,
+	TIER_NOT_FOUND,
+	TIER_ALREADY_CLOSED,
+	TIER_SOLD_OUT,
+	DUPLICATE_TIER_NAME,
+	TICKET_NOT_FOUND,
+	TICKET_NOT_OWNED,
+	TICKET_ALREADY_CHECKED_IN,
+	STAFF_ALREADY_ASSIGNED,
+	INVALID_QR_TOKEN,
+	SALES_NOT_OPEN,
+	VALIDATION_ERROR,
+	DATA_INTEGRITY_VIOLATION
+}
