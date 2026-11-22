@@ -19,18 +19,16 @@
 7. **salesStartDate**: datetime
 8. **salesEndDate**: datetime
 9. **createdAt**: timestamp _generated_
-10. **status**: enum _required_ - [Published, Ongoing, Preparing, Finished]
+10. **status**: enum _required_ - [Draft, Published, Ongoing, Canceled, Completed]
 
 ### TicketTier
 
 1. **id**: uuid _generated_
-2. **name**: string _required_
-3. **tier**: string _required_
-4. **totalSold**: int _generated_
-5. **totalStock**: int
-6. **price**: bigint _required_
-7. **currency**: string _required_
-8. **createdAt**: timestamp _generated_
+2. **tier**: string _required_
+3. **totalStock**: int
+4. **price**: bigint _required_
+5. **currency**: string _required_
+6. **createdAt**: timestamp _generated_
 
 ### Ticket
 
@@ -86,7 +84,7 @@
 | Get A Ticket Sale    | GET /events/{eventId}/tickets/{ticketId}       | -                       | TicketResponse            |
 | Assign Event Staff   | POST /events/{eventId}/staff                   | EventStaffAssignRequest | List<UserSummaryResponse> |
 | Get Event Staff      | GET /events/{eventId}/staff                    | -                       | List<UserSummaryResponse> |
-| Remove Event Staff   | DELETE /events/{eventId}/staff/{staffId}       | -                       | -                         |
+| Remove Event Staff   | DELETE /events/{eventId}/staff/{staffId}       | -                       | UserSummaryResponse       |
 
 ### Attendee Endpoints
 

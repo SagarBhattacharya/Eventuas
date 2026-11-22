@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: eventuas-pg
+    environment:
+      POSTGRES_DB: eventuas
+      POSTGRES_USER: eventuas
+      POSTGRES_PASSWORD: eventuas
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./deploy/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventuas -d eventuas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  casdoor:
+    image: casbin/casdoor:4.29
+    container_name: eventuas-auth
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      GOMEMLIMIT: 256MiB
+    ports:
+      - "9090:8000"
+    volumes:
+      - ./deploy/casdoor.conf:/conf/app.conf:ro
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+volumes:
+  postgres_data:
