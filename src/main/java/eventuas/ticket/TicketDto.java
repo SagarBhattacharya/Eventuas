@@ -28,6 +28,22 @@ public final class TicketDto {
 		}
 	}
 
+	@Schema(name = "TicketSummary")
+	public record Summary(
+		UUID ticketId,
+		UUID eventId,
+		String eventName,
+		String venue,
+		Instant startDate,
+		Instant endDate,
+		String tierName,
+		long price,
+		String currency,
+		boolean checkedIn,
+		Instant checkedInAt,
+		Instant purchasedAt
+	) {}
+
 	@Schema(name = "QrTokenResponse")
 	public record QrTokenResponse(String qrToken) {}
 }

@@ -122,4 +122,14 @@ public final class TestHarness {
 
 		return objectMapper.readTree(response).get("qrToken").asString();
 	}
+
+	public String checkIn(TestUser scanner, String qrToken) throws Exception {
+		String response = postJson("/check-ins", scanner, Map.of("qrToken", qrToken))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		return objectMapper.readTree(response).get("id").asString();
+	}
 }

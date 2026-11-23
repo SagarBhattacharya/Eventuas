@@ -32,7 +32,9 @@ class EventStaffTest extends IntegrationTest {
 		mvc.perform(get("/events/{eventId}/staff", eventId)
 				.with(organizer.jwtPostProcessor()))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[*].userId", hasItem(staff.id().toString())));
+			.andExpect(jsonPath("$[*].userId", hasItem(staff.id().toString())))
+			.andExpect(jsonPath("$[*].name", hasItem(staff.name())))
+			.andExpect(jsonPath("$[*].email", hasItem(staff.email())));
 	}
 
 	@Test

@@ -18,6 +18,16 @@ public final class EventStaffDto {
 		String email
 	) {}
 
+	@Schema(name = "EventStaffMember")
+	public record Member(
+		UUID id,
+		UUID eventId,
+		UUID userId,
+		String name,
+		String email,
+		Instant assignedAt
+	) {}
+
 	@Schema(name = "EventStaff")
 	public record Response(
 		UUID id,

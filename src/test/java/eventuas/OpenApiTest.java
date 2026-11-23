@@ -28,8 +28,10 @@ class OpenApiTest extends IntegrationTest {
 			"/users/me",
 			"/events",
 			"/events/published",
+			"/events/published/{eventId}",
 			"/events/{eventId}/publish",
 			"/events/{eventId}/close",
+			"/events/{eventId}/stats",
 			"/events/{eventId}/tiers",
 			"/events/{eventId}/tiers/{tierId}/close",
 			"/events/published/{eventId}/tiers",
@@ -40,6 +42,15 @@ class OpenApiTest extends IntegrationTest {
 			"/events/{eventId}/staff/{staffUserId}",
 			"/check-ins"
 		);
+
+		assertThat(root.path("components")
+			.path("schemas")
+			.has("PublicEventDetail"))
+			.isTrue();
+		assertThat(root.path("components")
+			.path("schemas")
+			.has("EventStats"))
+			.isTrue();
 
 		assertThat(body).doesNotContain("\"Jwt\"");
 	}

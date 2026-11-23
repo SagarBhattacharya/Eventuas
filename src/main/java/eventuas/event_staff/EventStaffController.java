@@ -31,13 +31,11 @@ public class EventStaffController {
 	}
 
 	@GetMapping
-	public List<EventStaffDto.Response> list(
+	public List<EventStaffDto.Member> list(
 		@CurrentUser UUID userId,
 		@PathVariable UUID eventId
 	) {
-		return eventStaffService.listStaff(userId, eventId).stream()
-			.map(EventStaffDto.Response::from)
-			.toList();
+		return eventStaffService.listStaff(userId, eventId);
 	}
 
 	@DeleteMapping("/{staffUserId}")

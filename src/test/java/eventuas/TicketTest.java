@@ -48,7 +48,7 @@ class TicketTest extends IntegrationTest {
 		mvc.perform(get("/tickets/me")
 				.with(buyer.jwtPostProcessor()))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[*].id", hasItem(ticketId)));
+			.andExpect(jsonPath("$[*].ticketId", hasItem(ticketId)));
 	}
 
 	@Test

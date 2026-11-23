@@ -1,5 +1,6 @@
 package eventuas.event;
 
+import eventuas.errors.AppException;
 import eventuas.ticket_tier.TicketTierRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@Transactional(readOnly = true)
 public class EventService {
 
 	private final EventRepository eventRepository;
@@ -54,6 +56,23 @@ public class EventService {
 
 	public List<Event> listPublished() {
 		return eventRepository.findAllPublished();
+	}
+
+	@Transactional(readOnly = true)
+	public EventDto.PublicDetail getPublishedDetail(UUID eventId) {
+		var event = eventRepository.findById(eventId)
+			.orElseThrow(AppException.EventNotFound::new);
+		event.ensureOpenToPublic();
+
+		var tiers = ticketTierRepository.findActiveByEventId(eventId);
+		return EventDto.PublicDetail.from(event, tiers);
+	}
+
+	@Transactional(readOnly = true)
+	public EventDto.Stats getStats(UUID organizerId, UUID eventId) {
+		var event = eventAccess.requireOwned(organizerId, eventId, "view stats for");
+		var tierStats = ticketTierRepository.findStatsByEventId(eventId);
+		return EventDto.Stats.from(event, tierStats);
 	}
 
 	@Transactional

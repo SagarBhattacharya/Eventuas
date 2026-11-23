@@ -47,14 +47,14 @@ public class EventStaffService {
 		}
 	}
 
-	public List<EventStaff> listStaff(UUID organizerId, UUID eventId) {
+	public List<EventStaffDto.Member> listStaff(UUID organizerId, UUID eventId) {
 		var _ = eventAccess.requireOwned(organizerId, eventId, "list staff for");
-		return eventStaffRepository.findByEventIdOrderByCreatedAtAsc(eventId);
+		return eventStaffRepository.findMembersByEventId(eventId);
 	}
 
 	@Transactional
 	public void revokeStaff(UUID organizerId, UUID eventId, UUID staffUserId) {
 		var _ = eventAccess.requireOwned(organizerId, eventId, "revoke staff from");
-		eventStaffRepository.deleteByEventIdAndUserId(eventId, staffUserId);
+		var _ = eventStaffRepository.deleteByEventIdAndUserId(eventId, staffUserId);
 	}
 }

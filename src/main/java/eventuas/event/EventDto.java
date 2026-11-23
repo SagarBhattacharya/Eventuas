@@ -1,11 +1,14 @@
 package eventuas.event;
 
+import eventuas.ticket_tier.TicketTier;
+import eventuas.ticket_tier.TicketTierDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public final class EventDto {
@@ -92,6 +95,83 @@ public final class EventDto {
 				event.status(),
 				event.createdAt(),
 				event.updatedAt()
+			);
+		}
+	}
+
+	@Schema(name = "PublicEventDetail")
+	public record PublicDetail(
+		UUID id,
+		String name,
+		String description,
+		String venue,
+		Instant startDate,
+		Instant endDate,
+		Instant salesStartDate,
+		Instant salesEndDate,
+		UUID organizerId,
+		Event.Status status,
+		Instant createdAt,
+		Instant updatedAt,
+		List<TicketTierDto.Response> tiers
+	) {
+		public static PublicDetail from(Event event, List<TicketTier> tiers) {
+			return new PublicDetail(
+				event.id(),
+				event.name(),
+				event.description(),
+				event.venue(),
+				event.startDate(),
+				event.endDate(),
+				event.salesStartDate(),
+				event.salesEndDate(),
+				event.organizerId(),
+				event.status(),
+				event.createdAt(),
+				event.updatedAt(),
+				tiers.stream().map(TicketTierDto.Response::from).toList()
+			);
+		}
+	}
+
+	@Schema(name = "TicketTierStats")
+	public record TierStats(
+		UUID tierId,
+		String tierName,
+		TicketTier.Status status,
+		long price,
+		String currency,
+		long soldCount,
+		long remainingQty,
+		long checkedInCount,
+		long revenue
+	) {}
+
+	@Schema(name = "EventStats")
+	public record Stats(
+		UUID eventId,
+		String eventName,
+		Event.Status status,
+		long totalCapacity,
+		long ticketsSold,
+		long ticketsRemaining,
+		long checkedInCount,
+		List<TierStats> tiers
+	) {
+		public static Stats from(Event event, List<TierStats> tiers) {
+			long sold = tiers.stream().mapToLong(TierStats::soldCount).sum();
+			long remaining = tiers.stream().mapToLong(TierStats::remainingQty).sum();
+			long checkedIn = tiers.stream().mapToLong(TierStats::checkedInCount).sum();
+
+			return new Stats(
+				event.id(),
+				event.name(),
+				event.status(),
+				sold + remaining,
+				sold,
+				remaining,
+				checkedIn,
+				tiers
 			);
 		}
 	}

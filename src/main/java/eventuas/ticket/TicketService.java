@@ -55,8 +55,8 @@ public class TicketService {
 		return ticketRepository.save(Ticket.issue(buyerId, tierId, now));
 	}
 
-	public List<Ticket> listByBuyer(UUID buyerId) {
-		return ticketRepository.findByPurchasedByOrderByCreatedAtDesc(buyerId);
+	public List<TicketDto.Summary> listByBuyer(UUID buyerId) {
+		return ticketRepository.findSummariesByBuyer(buyerId);
 	}
 
 	public String issueQrToken(UUID buyerId, UUID ticketId) {

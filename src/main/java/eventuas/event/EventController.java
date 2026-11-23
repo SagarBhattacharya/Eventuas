@@ -56,6 +56,19 @@ public class EventController {
 			.toList();
 	}
 
+	@GetMapping("/published/{eventId}")
+	public EventDto.PublicDetail getPublished(@PathVariable UUID eventId) {
+		return eventService.getPublishedDetail(eventId);
+	}
+
+	@GetMapping("/{eventId}/stats")
+	public EventDto.Stats stats(
+		@CurrentUser UUID userId,
+		@PathVariable UUID eventId
+	) {
+		return eventService.getStats(userId, eventId);
+	}
+
 	@PostMapping("/{eventId}/publish")
 	public EventDto.Response publish(
 		@CurrentUser UUID userId,

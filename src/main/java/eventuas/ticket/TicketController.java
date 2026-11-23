@@ -32,10 +32,8 @@ public class TicketController {
 	}
 
 	@GetMapping("/tickets/me")
-	public List<TicketDto.Response> myTickets(@CurrentUser UUID userId) {
-		return ticketService.listByBuyer(userId).stream()
-			.map(TicketDto.Response::from)
-			.toList();
+	public List<TicketDto.Summary> myTickets(@CurrentUser UUID userId) {
+		return ticketService.listByBuyer(userId);
 	}
 
 	@GetMapping("/tickets/{ticketId}/qr")
