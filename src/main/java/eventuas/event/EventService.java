@@ -69,16 +69,8 @@ public class EventService {
 
 	@Transactional(readOnly = true)
 	public PagedResponse<EventDto.Response> listPublished(EventDto.PublicFilter filter, PageQuery pageQuery) {
-		var page = paginationRepository.findPublishedEvents(filter, pageQuery);
-		var mapped = page.items().stream().map(EventDto.Response::from).toList();
-		return new PagedResponse<>(
-			mapped,
-			page.page(),
-			page.size(),
-			page.totalElements(),
-			page.totalPages(),
-			page.hasNext()
-		);
+		return paginationRepository.findPublishedEvents(filter, pageQuery)
+			.map(EventDto.Response::from);
 	}
 
 	@Transactional(readOnly = true)
