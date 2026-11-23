@@ -5,14 +5,12 @@ import eventuas.errors.AppException;
 import eventuas.event.EventRepository;
 import eventuas.pagination.PageQuery;
 import eventuas.pagination.PagedResponse;
-import eventuas.pagination.PaginationRepository;
 import eventuas.ticket_tier.TicketTierRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -23,7 +21,7 @@ public class TicketService {
 	private final TicketRepository ticketRepository;
 	private final QrSigner qrSigner;
 	private final Clock clock;
-	private final PaginationRepository paginationRepository;
+	private final TicketQueryRepository ticketQueryRepository;
 
 	public TicketService(
 		EventRepository eventRepository,
@@ -31,14 +29,14 @@ public class TicketService {
 		TicketRepository ticketRepository,
 		QrSigner qrSigner,
 		Clock clock,
-		PaginationRepository paginationRepository
+		TicketQueryRepository ticketQueryRepository
 	) {
 		this.eventRepository = eventRepository;
 		this.ticketTierRepository = ticketTierRepository;
 		this.ticketRepository = ticketRepository;
 		this.qrSigner = qrSigner;
 		this.clock = clock;
-		this.paginationRepository = paginationRepository;
+		this.ticketQueryRepository = ticketQueryRepository;
 	}
 
 	@Transactional
@@ -67,7 +65,8 @@ public class TicketService {
 		TicketDto.WalletFilter filter,
 		PageQuery pageQuery
 	) {
-		return paginationRepository.findBuyerTickets(buyerId, filter, clock.instant(), pageQuery);
+		return ticketQueryRepository
+			.findByBuyer(buyerId, filter, clock.instant(), pageQuery);
 	}
 
 	public String issueQrToken(UUID buyerId, UUID ticketId) {

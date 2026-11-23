@@ -3,14 +3,12 @@ package eventuas.event;
 import eventuas.errors.AppException;
 import eventuas.pagination.PageQuery;
 import eventuas.pagination.PagedResponse;
-import eventuas.pagination.PaginationRepository;
 import eventuas.ticket_tier.TicketTierRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -21,20 +19,20 @@ public class EventService {
 	private final EventAccess eventAccess;
 	private final TicketTierRepository ticketTierRepository;
 	private final Clock clock;
-	private final PaginationRepository paginationRepository;
+	private final EventQueryRepository eventQueryRepository;
 
 	public EventService(
 		EventRepository eventRepository,
 		EventAccess eventAccess,
 		TicketTierRepository ticketTierRepository,
 		Clock clock,
-		PaginationRepository eventQueryRepository
+		EventQueryRepository eventQueryRepository
 	) {
 		this.eventRepository = eventRepository;
 		this.eventAccess = eventAccess;
 		this.ticketTierRepository = ticketTierRepository;
 		this.clock = clock;
-		this.paginationRepository = eventQueryRepository;
+		this.eventQueryRepository = eventQueryRepository;
 	}
 
 	@Transactional
@@ -62,14 +60,18 @@ public class EventService {
 		EventDto.OrganizerFilter filter,
 		PageQuery pageQuery
 	) {
-		return paginationRepository
-			.findOrganizerEvents(organizerId, filter, pageQuery)
+		return eventQueryRepository
+			.findByOrganizer(organizerId, filter, pageQuery)
 			.map(EventDto.Response::from);
 	}
 
 	@Transactional(readOnly = true)
-	public PagedResponse<EventDto.Response> listPublished(EventDto.PublicFilter filter, PageQuery pageQuery) {
-		return paginationRepository.findPublishedEvents(filter, pageQuery)
+	public PagedResponse<EventDto.Response> listPublished(
+		EventDto.PublicFilter filter,
+		PageQuery pageQuery
+	) {
+		return eventQueryRepository
+			.findPublished(filter, pageQuery)
 			.map(EventDto.Response::from);
 	}
 
