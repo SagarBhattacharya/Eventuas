@@ -175,4 +175,42 @@ public final class EventDto {
 			);
 		}
 	}
+
+	@Schema(name = "PublicEventFilter")
+	public record PublicFilter(
+		@Schema(description = "Case-insensitive search across name, description, and venue")
+		String q,
+
+		@Schema(description = "Filter by public status (ACTIVE or CLOSED)")
+		Event.Status status,
+
+		@Schema(description = "Include events ending on or after this timestamp (ISO-8601)")
+		Instant from,
+
+		@Schema(description = "Include events starting on or before this timestamp (ISO-8601)")
+		Instant to
+	) {
+		public static PublicFilter empty() {
+			return new PublicFilter(null, null, null, null);
+		}
+	}
+
+	@Schema(name = "OrganizerEventFilter")
+	public record OrganizerFilter(
+		@Schema(description = "Case-insensitive search across name, description, and venue")
+		String q,
+
+		@Schema(description = "Filter by status (DRAFT, ACTIVE, or CLOSED)")
+		Event.Status status,
+
+		@Schema(description = "Include events ending on or after this timestamp (ISO-8601)")
+		Instant from,
+
+		@Schema(description = "Include events starting on or before this timestamp (ISO-8601)")
+		Instant to
+	) {
+		public static OrganizerFilter empty() {
+			return new OrganizerFilter(null, null, null, null);
+		}
+	}
 }

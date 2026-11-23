@@ -1,6 +1,9 @@
 package eventuas.ticket;
 
+import eventuas.pagination.PageQuery;
+import eventuas.pagination.PagedResponse;
 import eventuas.user.CurrentUser;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,8 +35,12 @@ public class TicketController {
 	}
 
 	@GetMapping("/tickets/me")
-	public List<TicketDto.Summary> myTickets(@CurrentUser UUID userId) {
-		return ticketService.listByBuyer(userId);
+	public PagedResponse<TicketDto.Summary> myTickets(
+		@CurrentUser UUID userId,
+		@ParameterObject TicketDto.WalletFilter filter,
+		@ParameterObject PageQuery pageQuery
+	) {
+		return ticketService.listByBuyer(userId, filter, pageQuery);
 	}
 
 	@GetMapping("/tickets/{ticketId}/qr")

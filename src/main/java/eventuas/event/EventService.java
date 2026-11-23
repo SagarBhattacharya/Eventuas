@@ -1,6 +1,9 @@
 package eventuas.event;
 
 import eventuas.errors.AppException;
+import eventuas.pagination.PageQuery;
+import eventuas.pagination.PagedResponse;
+import eventuas.pagination.PaginationRepository;
 import eventuas.ticket_tier.TicketTierRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,17 +21,20 @@ public class EventService {
 	private final EventAccess eventAccess;
 	private final TicketTierRepository ticketTierRepository;
 	private final Clock clock;
+	private final PaginationRepository paginationRepository;
 
 	public EventService(
 		EventRepository eventRepository,
 		EventAccess eventAccess,
 		TicketTierRepository ticketTierRepository,
-		Clock clock
+		Clock clock,
+		PaginationRepository eventQueryRepository
 	) {
 		this.eventRepository = eventRepository;
 		this.eventAccess = eventAccess;
 		this.ticketTierRepository = ticketTierRepository;
 		this.clock = clock;
+		this.paginationRepository = eventQueryRepository;
 	}
 
 	@Transactional
@@ -50,12 +56,29 @@ public class EventService {
 		return eventRepository.save(event);
 	}
 
-	public List<Event> listByOrganizer(UUID organizerId) {
-		return eventRepository.findByOrganizerIdOrderByCreatedAtDesc(organizerId);
+	@Transactional(readOnly = true)
+	public PagedResponse<EventDto.Response> listByOrganizer(
+		UUID organizerId,
+		EventDto.OrganizerFilter filter,
+		PageQuery pageQuery
+	) {
+		return paginationRepository
+			.findOrganizerEvents(organizerId, filter, pageQuery)
+			.map(EventDto.Response::from);
 	}
 
-	public List<Event> listPublished() {
-		return eventRepository.findAllPublished();
+	@Transactional(readOnly = true)
+	public PagedResponse<EventDto.Response> listPublished(EventDto.PublicFilter filter, PageQuery pageQuery) {
+		var page = paginationRepository.findPublishedEvents(filter, pageQuery);
+		var mapped = page.items().stream().map(EventDto.Response::from).toList();
+		return new PagedResponse<>(
+			mapped,
+			page.page(),
+			page.size(),
+			page.totalElements(),
+			page.totalPages(),
+			page.hasNext()
+		);
 	}
 
 	@Transactional(readOnly = true)

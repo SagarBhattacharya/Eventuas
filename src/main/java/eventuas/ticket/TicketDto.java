@@ -46,4 +46,20 @@ public final class TicketDto {
 
 	@Schema(name = "QrTokenResponse")
 	public record QrTokenResponse(String qrToken) {}
+
+	@Schema(name = "TicketWalletFilter")
+	public record WalletFilter(
+		@Schema(description = "Case-insensitive search across event name and venue")
+		String q,
+
+		@Schema(description = "Filter by check-in redemption status")
+		Boolean checkedIn,
+
+		@Schema(description = "Filter upcoming (true) vs past (false) events")
+		Boolean upcoming
+	) {
+		public static WalletFilter empty() {
+			return new WalletFilter(null, null, null);
+		}
+	}
 }

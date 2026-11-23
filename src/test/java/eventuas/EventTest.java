@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -50,52 +51,6 @@ class EventTest extends IntegrationTest {
 				"endDate", start.minus(1, ChronoUnit.HOURS).toString()
 			))
 			.andExpect(status().isBadRequest());
-	}
-
-	@Test
-	void listsOnlyOwnedEventsForAuthenticatedOrganizer() throws Exception {
-		var organizerA = TestUser.random("Alice");
-		var organizerB = TestUser.random("Bob");
-
-		String eventA = harness.createDraftEvent(organizerA, "Organizer A Draft");
-		String eventB = harness.createDraftEvent(organizerB, "Organizer B Draft");
-
-		mvc.perform(get("/events"))
-			.andExpect(status().isUnauthorized());
-
-		mvc.perform(get("/events")
-				.with(organizerA.jwtPostProcessor()))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[*].id", hasItem(eventA)))
-			.andExpect(jsonPath("$[*].id", not(hasItem(eventB))));
-	}
-
-	@Test
-	void listsPublishedAndClosedEventsPubliclyButNeverDrafts() throws Exception {
-		var organizer = TestUser.random("Organizer");
-		String draftId = harness.createDraftEvent(organizer, "Secret Draft");
-		String activeId = harness.createDraftEvent(organizer, "Live Rust Conf");
-		String closedId = harness.createDraftEvent(organizer, "Past Kernel Summit");
-		harness.createTier(organizer, activeId, "General", 1000, 10);
-		harness.createTier(organizer, closedId, "General Closeable", 1000, 10);
-
-		mvc.perform(post("/events/{id}/publish", activeId)
-				.with(organizer.jwtPostProcessor()))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.status").value("ACTIVE"));
-
-		harness.publishEvent(organizer, closedId);
-
-		mvc.perform(post("/events/{id}/close", closedId)
-				.with(organizer.jwtPostProcessor()))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.status").value("CLOSED"));
-
-		mvc.perform(get("/events/published"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[*].id", hasItem(activeId)))
-			.andExpect(jsonPath("$[*].id", hasItem(closedId)))
-			.andExpect(jsonPath("$[*].id", not(hasItem(draftId))));
 	}
 
 	@Test
@@ -256,5 +211,137 @@ class EventTest extends IntegrationTest {
 				.with(organizer.jwtPostProcessor()))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("ACTIVE"));
+	}
+
+	@Test
+	void listsPublishedAndClosedEventsPubliclyButNeverDrafts() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		String draftId = harness.createDraftEvent(organizer, "Secret Draft");
+		String activeId = harness.createDraftEvent(organizer, "Live Rust Conf");
+		String closedId = harness.createDraftEvent(organizer, "Past Kernel Summit");
+
+		harness.createTier(organizer, activeId, "General", 1000, 10);
+		harness.createTier(organizer, closedId, "Closeable General", 1000, 10);
+		mvc.perform(post("/events/{id}/publish", activeId)
+				.with(organizer.jwtPostProcessor()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ACTIVE"));
+
+		harness.publishEvent(organizer, closedId);
+
+		mvc.perform(post("/events/{id}/close", closedId)
+				.with(organizer.jwtPostProcessor()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("CLOSED"));
+
+		mvc.perform(get("/events/published"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].id", hasItem(activeId)))
+			.andExpect(jsonPath("$.items[*].id", hasItem(closedId)))
+			.andExpect(jsonPath("$.items[*].id", not(hasItem(draftId))));
+	}
+
+	@Test
+	void searchesFiltersAndPaginatesPublishedEvents() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		String tag = UUID.randomUUID().toString().substring(0, 8);
+
+		String draftId = harness.createDraftEvent(organizer, "Rust Draft " + tag);
+		String event1 = harness.createPublishedEvent(organizer, "Rust Systems Alpha " + tag);
+		String event2 = harness.createPublishedEvent(organizer, "Rust Storage Beta " + tag);
+		String event3 = harness.createPublishedEvent(organizer, "Rust Kernel Gamma " + tag);
+		String closedEvent = harness.createPublishedEvent(organizer, "Rust Archived " + tag);
+		harness.closeEvent(organizer, closedEvent);
+
+		// 1. Page 0 with size=2 scoped by unique search tag
+		mvc.perform(get("/events/published")
+				.param("q", tag)
+				.param("page", "0")
+				.param("size", "2"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items", hasSize(2)))
+			.andExpect(jsonPath("$.page").value(0))
+			.andExpect(jsonPath("$.size").value(2))
+			.andExpect(jsonPath("$.totalElements").value(4))
+			.andExpect(jsonPath("$.totalPages").value(2))
+			.andExpect(jsonPath("$.hasNext").value(true))
+			.andExpect(jsonPath("$.items[*].id", not(hasItem(draftId))));
+
+		// 2. Page 1 returns remaining 2 items and sets hasNext=false
+		mvc.perform(get("/events/published")
+				.param("q", tag)
+				.param("page", "1")
+				.param("size", "2"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items", hasSize(2)))
+			.andExpect(jsonPath("$.page").value(1))
+			.andExpect(jsonPath("$.hasNext").value(false));
+
+		// 3. Status filter isolates ACTIVE vs CLOSED and never exposes DRAFT
+		mvc.perform(get("/events/published")
+				.param("q", tag)
+				.param("status", "ACTIVE"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalElements").value(3))
+			.andExpect(jsonPath("$.items[*].id", containsInAnyOrder(event1, event2, event3)));
+
+		mvc.perform(get("/events/published")
+				.param("q", tag)
+				.param("status", "DRAFT"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalElements").value(0))
+			.andExpect(jsonPath("$.items", hasSize(0)));
+	}
+
+	@Test
+	void listsOnlyOwnedEventsForAuthenticatedOrganizer() throws Exception {
+		var organizerA = TestUser.random("Alice");
+		var organizerB = TestUser.random("Bob");
+
+		String eventA = harness.createDraftEvent(organizerA, "Organizer A Draft");
+		String eventB = harness.createDraftEvent(organizerB, "Organizer B Draft");
+
+		mvc.perform(get("/events"))
+			.andExpect(status().isUnauthorized());
+
+		mvc.perform(get("/events")
+				.with(organizerA.jwtPostProcessor()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].id", hasItem(eventA)))
+			.andExpect(jsonPath("$.items[*].id", not(hasItem(eventB))));
+	}
+
+	@Test
+	void searchesFiltersAndPaginatesOrganizerEvents() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		var otherOrganizer = TestUser.random("Other");
+
+		String draftId = harness.createDraftEvent(organizer, "Kernel Workshop Draft");
+		String activeId1 = harness.createPublishedEvent(organizer, "Kernel Summit Alpha");
+		String activeId2 = harness.createPublishedEvent(organizer, "Kernel Summit Beta");
+		harness.createPublishedEvent(otherOrganizer, "Kernel Summit Outsider");
+
+		// 1. Filter by status=ACTIVE and search keyword, paginated with size=1
+		mvc.perform(get("/events")
+				.with(organizer.jwtPostProcessor())
+				.param("q", "Kernel")
+				.param("status", "ACTIVE")
+				.param("page", "0")
+				.param("size", "1"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items", hasSize(1)))
+			.andExpect(jsonPath("$.totalElements").value(2))
+			.andExpect(jsonPath("$.totalPages").value(2))
+			.andExpect(jsonPath("$.hasNext").value(true));
+
+		// 2. Filter by status=DRAFT returns only organizer's draft
+		mvc.perform(get("/events")
+				.with(organizer.jwtPostProcessor())
+				.param("status", "DRAFT"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalElements").value(1))
+			.andExpect(jsonPath("$.items[0].id").value(draftId))
+			.andExpect(jsonPath("$.items[*].id", not(hasItem(activeId1))))
+			.andExpect(jsonPath("$.items[*].id", not(hasItem(activeId2))));
 	}
 }

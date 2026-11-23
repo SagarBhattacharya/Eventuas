@@ -51,6 +51,10 @@ class OpenApiTest extends IntegrationTest {
 			.path("schemas")
 			.has("EventStats"))
 			.isTrue();
+		assertThat(root.path("components")
+			.path("schemas")
+			.has("PagedResponse"))
+			.isTrue();
 
 		assertThat(body).doesNotContain("\"Jwt\"");
 	}

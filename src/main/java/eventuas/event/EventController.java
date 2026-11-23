@@ -1,7 +1,10 @@
 package eventuas.event;
 
+import eventuas.pagination.PageQuery;
+import eventuas.pagination.PagedResponse;
 import eventuas.user.CurrentUser;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -41,19 +44,20 @@ public class EventController {
 	}
 
 	@GetMapping
-	public List<EventDto.Response> listOwned(
-		@CurrentUser UUID userId
+	public PagedResponse<EventDto.Response> listOwned(
+		@CurrentUser UUID userId,
+		@ParameterObject EventDto.OrganizerFilter filter,
+		@ParameterObject PageQuery pageQuery
 	) {
-		return eventService.listByOrganizer(userId).stream()
-			.map(EventDto.Response::from)
-			.toList();
+		return eventService.listByOrganizer(userId, filter, pageQuery);
 	}
 
 	@GetMapping("/published")
-	public List<EventDto.Response> listPublished() {
-		return eventService.listPublished().stream()
-			.map(EventDto.Response::from)
-			.toList();
+	public PagedResponse<EventDto.Response> listPublished(
+		@ParameterObject EventDto.PublicFilter filter,
+		@ParameterObject PageQuery pageQuery
+	) {
+		return eventService.listPublished(filter, pageQuery);
 	}
 
 	@GetMapping("/published/{eventId}")

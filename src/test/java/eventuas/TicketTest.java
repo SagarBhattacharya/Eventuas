@@ -18,6 +18,7 @@ import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -27,29 +28,6 @@ class TicketTest extends IntegrationTest {
 
 	@Autowired
 	JdbcTemplate jdbcTemplate;
-
-	@Test
-	void buyerPurchasesTicketAndDecrementsStock() throws Exception {
-		var organizer = TestUser.random("Organizer");
-		var buyer = TestUser.random("Buyer");
-
-		String eventId = harness.createPublishedEvent(organizer, "Systems Conf");
-		String tierId = harness.createTier(organizer, eventId, "General", 1500, 10);
-
-		String ticketId = harness.buyTicket(buyer, tierId);
-
-		Long remaining = jdbcTemplate.queryForObject(
-			"SELECT available_qty FROM ticket_tiers WHERE id = ?::uuid",
-			Long.class,
-			tierId
-		);
-		assertThat(remaining).isEqualTo(9L);
-
-		mvc.perform(get("/tickets/me")
-				.with(buyer.jwtPostProcessor()))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$[*].ticketId", hasItem(ticketId)));
-	}
 
 	@Test
 	void rejectsPurchaseWhenEventIsDraftOrClosed() throws Exception {
@@ -198,5 +176,76 @@ class TicketTest extends IntegrationTest {
 		mvc.perform(post("/tiers/{tierId}/buy", expiredTierId)
 				.with(buyer.jwtPostProcessor()))
 			.andExpect(status().isConflict());
+	}
+
+	@Test
+	void buyerPurchasesTicketAndDecrementsStock() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		var buyer = TestUser.random("Buyer");
+
+		String eventId = harness.createPublishedEvent(organizer, "Systems Conf");
+		String tierId = harness.createTier(organizer, eventId, "General", 1500, 10);
+
+		String ticketId = harness.buyTicket(buyer, tierId);
+
+		Long remaining = jdbcTemplate.queryForObject(
+			"SELECT available_qty FROM ticket_tiers WHERE id = ?::uuid",
+			Long.class,
+			tierId
+		);
+		assertThat(remaining).isEqualTo(9L);
+
+		mvc.perform(get("/tickets/me")
+				.with(buyer.jwtPostProcessor()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].ticketId", hasItem(ticketId)));
+	}
+
+	@Test
+	void searchesFiltersAndPaginatesBuyerTickets() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		var buyer = TestUser.random("Buyer");
+
+		String rustEventId = harness.createPublishedEvent(organizer, "Rust Kolkata Meetup");
+		String rustTierId = harness.createTier(organizer, rustEventId, "Pass", 500, 10);
+
+		String goEventId = harness.createPublishedEvent(organizer, "Go Systems Conf");
+		String goTierId = harness.createTier(organizer, goEventId, "Pass", 800, 10);
+
+		String checkedInTicket = harness.buyTicket(buyer, rustTierId);
+		String unusedTicket = harness.buyTicket(buyer, goTierId);
+
+		String qrToken = harness.fetchQrToken(buyer, checkedInTicket);
+		harness.checkIn(organizer, qrToken);
+
+		// 1. Paginate across all buyer tickets (2 total, size=1)
+		mvc.perform(get("/tickets/me")
+				.with(buyer.jwtPostProcessor())
+				.param("page", "0")
+				.param("size", "1"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items", hasSize(1)))
+			.andExpect(jsonPath("$.totalElements").value(2))
+			.andExpect(jsonPath("$.totalPages").value(2))
+			.andExpect(jsonPath("$.hasNext").value(true));
+
+		// 2. Filter by checkedIn=true and event keyword
+		mvc.perform(get("/tickets/me")
+				.with(buyer.jwtPostProcessor())
+				.param("q", "Rust")
+				.param("checkedIn", "true"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalElements").value(1))
+			.andExpect(jsonPath("$.items[0].ticketId").value(checkedInTicket))
+			.andExpect(jsonPath("$.items[0].checkedIn").value(true));
+
+		// 3. Filter by checkedIn=false
+		mvc.perform(get("/tickets/me")
+				.with(buyer.jwtPostProcessor())
+				.param("checkedIn", "false"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalElements").value(1))
+			.andExpect(jsonPath("$.items[0].ticketId").value(unusedTicket))
+			.andExpect(jsonPath("$.items[0].checkedIn").value(false));
 	}
 }

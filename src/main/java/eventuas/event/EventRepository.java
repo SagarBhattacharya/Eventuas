@@ -9,7 +9,4 @@ import java.util.UUID;
 public interface EventRepository extends CrudRepository<Event, UUID> {
 
 	List<Event> findByOrganizerIdOrderByCreatedAtDesc(UUID organizerId);
-
-	@Query("SELECT * FROM events WHERE status <> 'DRAFT' ORDER BY start_date")
-	List<Event> findAllPublished();
 }
