@@ -3,6 +3,7 @@ package eventuas.pagination;
 import eventuas.event.Event;
 import eventuas.event.EventDto;
 import eventuas.ticket.TicketDto;
+import org.springframework.jdbc.core.DataClassRowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -19,6 +20,10 @@ import java.util.UUID;
 public class PaginationRepository {
 
 	private final JdbcClient jdbcClient;
+	private static final DataClassRowMapper<Event> EVENT_MAPPER =
+		DataClassRowMapper.newInstance(Event.class);
+	private static final DataClassRowMapper<TicketDto.Summary> TICKET_SUMMARY_MAPPER =
+		DataClassRowMapper.newInstance(TicketDto.Summary.class);
 
 	public PaginationRepository(JdbcClient jdbcClient) {
 		this.jdbcClient = jdbcClient;
@@ -65,8 +70,8 @@ public class PaginationRepository {
 		params.put("buyerId", buyerId);
 
 		if (filter.q() != null && !filter.q().isBlank()) {
-			where.append(" AND (e.name ILIKE :q OR e.venue ILIKE :q)");
-			params.put("q", "%" + filter.q().trim() + "%");
+			where.append(" AND (e.name ILIKE :q ESCAPE '\\' OR e.venue ILIKE :q ESCAPE '\\')");
+			params.put("q", escapeLikePattern(filter.q()));
 		}
 		if (filter.checkedIn() != null) {
 			where.append(filter.checkedIn() ? " AND ci.id IS NOT NULL" : " AND ci.id IS NULL");
@@ -105,7 +110,7 @@ public class PaginationRepository {
 				t.created_at AS purchased_at
 		""" + where + " ORDER BY t.created_at DESC, t.id DESC LIMIT :limit OFFSET :offset")
 			.params(dataParams)
-			.query(PaginationRepository::mapTicketSummary)
+			.query(TICKET_SUMMARY_MAPPER)
 			.list();
 
 		return PagedResponse.of(items, pageQuery, total);
@@ -120,8 +125,8 @@ public class PaginationRepository {
 		Instant to
 	) {
 		if (q != null && !q.isBlank()) {
-			where.append(" AND (name ILIKE :q OR description ILIKE :q OR venue ILIKE :q)");
-			params.put("q", "%" + q.trim() + "%");
+			where.append(" AND (name ILIKE :q ESCAPE '\\' OR description ILIKE :q ESCAPE '\\' OR venue ILIKE :q ESCAPE '\\')");
+			params.put("q", escapeLikePattern(q));
 		}
 		if (status != null) {
 			where.append(" AND status = :status");
@@ -163,47 +168,17 @@ public class PaginationRepository {
 				FROM events
 				""" + whereClause + orderBy + " LIMIT :limit OFFSET :offset")
 			.params(dataParams)
-			.query(PaginationRepository::mapEvent)
+			.query(EVENT_MAPPER)
 			.list();
 
 		return PagedResponse.of(items, pageQuery, total);
 	}
 
-	private static Event mapEvent(ResultSet rs, int rowNum) throws SQLException {
-		return new Event(
-			rs.getObject("id", UUID.class),
-			rs.getString("name"),
-			rs.getString("description"),
-			rs.getString("venue"),
-			rs.getTimestamp("start_date").toInstant(),
-			rs.getTimestamp("end_date").toInstant(),
-			toInstant(rs.getTimestamp("sales_start_date")),
-			toInstant(rs.getTimestamp("sales_end_date")),
-			rs.getObject("organizer_id", UUID.class),
-			Event.Status.valueOf(rs.getString("status")),
-			rs.getTimestamp("created_at").toInstant(),
-			rs.getTimestamp("updated_at").toInstant()
-		);
-	}
-
-	private static TicketDto.Summary mapTicketSummary(ResultSet rs, int rowNum) throws SQLException {
-		return new TicketDto.Summary(
-			rs.getObject("ticket_id", UUID.class),
-			rs.getObject("event_id", UUID.class),
-			rs.getString("event_name"),
-			rs.getString("venue"),
-			rs.getTimestamp("start_date").toInstant(),
-			rs.getTimestamp("end_date").toInstant(),
-			rs.getString("tier_name"),
-			rs.getLong("price"),
-			rs.getString("currency"),
-			rs.getBoolean("checked_in"),
-			toInstant(rs.getTimestamp("checked_in_at")),
-			rs.getTimestamp("purchased_at").toInstant()
-		);
-	}
-
-	private static Instant toInstant(Timestamp ts) {
-		return ts == null ? null : ts.toInstant();
+	private static String escapeLikePattern(String raw) {
+		String escaped = raw.trim()
+			.replace("\\", "\\\\")
+			.replace("%", "\\%")
+			.replace("_", "\\_");
+		return "%" + escaped + "%";
 	}
 }

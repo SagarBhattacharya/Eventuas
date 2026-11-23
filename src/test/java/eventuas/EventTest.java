@@ -362,4 +362,20 @@ class EventTest extends IntegrationTest {
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 	}
+
+	@Test
+	void escapesLikeWildcardsInPublicEventSearch() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		String tag = UUID.randomUUID().toString().substring(0, 8);
+
+		String plainEventId = harness.createPublishedEvent(organizer, "Normal Conf " + tag);
+		String percentEventId = harness.createPublishedEvent(organizer, "100% Rust Conf " + tag);
+
+		// Searching literal "%" must NOT match "Normal Conf"
+		mvc.perform(get("/events/published")
+				.param("q", "%"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items[*].id", hasItem(percentEventId)))
+			.andExpect(jsonPath("$.items[*].id", not(hasItem(plainEventId))));
+	}
 }
