@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -173,5 +175,59 @@ class CheckInTest extends IntegrationTest {
 			ticketId
 		);
 		assertThat(rows).isEqualTo(1);
+	}
+
+	@Test
+	void enforcesCheckInGraceWindowAfterEventEndDate() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		var buyer = TestUser.random("Buyer");
+
+		// 1. Ended 2 hours ago -> within default 6h grace window -> succeeds
+		Instant recentStart = Instant.now().minus(4, ChronoUnit.HOURS);
+		String withinGraceEventId = createCustomWindowEvent(
+			organizer, "Late Session", recentStart, recentStart.plus(2, ChronoUnit.HOURS)
+		);
+		String validTierId = harness.createTier(organizer, withinGraceEventId, "Pass", 1000, 5);
+		harness.publishEvent(organizer, withinGraceEventId);
+		String validTicketId = harness.buyTicket(buyer, validTierId);
+		String validQr = harness.fetchQrToken(buyer, validTicketId);
+
+		harness.postJson("/check-ins", organizer, Map.of("qrToken", validQr))
+			.andExpect(status().isCreated());
+
+		// 2. Ended 7 hours ago -> past 6h grace window -> 409 Conflict
+		Instant expiredStart = Instant.now().minus(9, ChronoUnit.HOURS);
+		String expiredEventId = createCustomWindowEvent(
+			organizer, "Expired Session", expiredStart, expiredStart.plus(2, ChronoUnit.HOURS)
+		);
+		String expiredTierId = harness.createTier(organizer, expiredEventId, "Pass", 1000, 5);
+		harness.publishEvent(organizer, expiredEventId);
+		String expiredTicketId = harness.buyTicket(buyer, expiredTierId);
+		String expiredQr = harness.fetchQrToken(buyer, expiredTicketId);
+
+		harness.postJson("/check-ins", organizer, Map.of("qrToken", expiredQr))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("CHECK_IN_WINDOW_CLOSED"));
+	}
+
+	private String createCustomWindowEvent(
+		TestUser organizer,
+		String name,
+		Instant start,
+		Instant end
+	) throws Exception {
+		String response = harness.postJson("/events", organizer, Map.of(
+				"name", name,
+				"description", "Window test event",
+				"venue", "Main Hall",
+				"startDate", start.toString(),
+				"endDate", end.toString()
+			))
+			.andExpect(status().isCreated())
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		return new tools.jackson.databind.ObjectMapper().readTree(response).get("id").asString();
 	}
 }

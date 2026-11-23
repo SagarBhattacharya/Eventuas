@@ -4,10 +4,12 @@ import eventuas.errors.AppException;
 import eventuas.event.EventAccess;
 import eventuas.ticket.TicketRepository;
 import eventuas.ticket_tier.TicketTierRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.UUID;
 
 @Service
@@ -19,6 +21,7 @@ public class CheckInService {
 	private final EventAccess eventAccess;
 	private final CheckInRepository checkInRepository;
 	private final Clock clock;
+	private final Duration checkInGrace;
 
 	public CheckInService(
 		QrSigner qrSigner,
@@ -26,7 +29,8 @@ public class CheckInService {
 		TicketTierRepository ticketTierRepository,
 		EventAccess eventAccess,
 		CheckInRepository checkInRepository,
-		Clock clock
+		Clock clock,
+		@Value("${app.check-in.grace:PT6H}") Duration checkInGrace
 	) {
 		this.qrSigner = qrSigner;
 		this.ticketRepository = ticketRepository;
@@ -34,6 +38,7 @@ public class CheckInService {
 		this.eventAccess = eventAccess;
 		this.checkInRepository = checkInRepository;
 		this.clock = clock;
+		this.checkInGrace = checkInGrace;
 	}
 
 	@Transactional
@@ -49,7 +54,7 @@ public class CheckInService {
 		var event = eventAccess.requireStaffOrOwner(
 			scannerId, tier.eventId(), "check in tickets for"
 		);
-		event.ensureOpenForCheckIn();
+		event.ensureOpenForCheckIn(clock.instant(), checkInGrace);
 
 		return checkInRepository.tryCheckIn(ticketId, scannerId, clock.instant())
 			.orElseThrow(AppException.TicketAlreadyCheckedIn::new);

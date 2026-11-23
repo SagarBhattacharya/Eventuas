@@ -73,10 +73,10 @@ public sealed abstract class AppException extends RuntimeException {
 	}
 
 	public static final class EventNotActive extends AppException {
-		public EventNotActive() {
+		public EventNotActive(String reason) {
 			super(
 				ErrorCode.EVENT_NOT_ACTIVE,
-				"Event is not active for ticket purchases."
+				"Event is not active for %s.".formatted(reason)
 			);
 		}
 	}
@@ -143,6 +143,15 @@ public sealed abstract class AppException extends RuntimeException {
 			super(
 				ErrorCode.EVENT_HAS_NO_ACTIVE_TIERS,
 				"Event must have at least one active ticket tier before publishing."
+			);
+		}
+	}
+
+	public static final class CheckInWindowClosed extends AppException {
+		public CheckInWindowClosed() {
+			super(
+				ErrorCode.CHECK_IN_WINDOW_CLOSED,
+				"Check-in window for this event has closed."
 			);
 		}
 	}

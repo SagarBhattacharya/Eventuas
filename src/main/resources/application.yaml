@@ -24,3 +24,5 @@ spring:
 app:
   qr:
     secret: ${APP_QR_SECRET}
+  check-in:
+    grace: ${APP_CHECK_IN_GRACE:PT6H}

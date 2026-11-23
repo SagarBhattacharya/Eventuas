@@ -216,12 +216,13 @@ class EventTest extends IntegrationTest {
 	@Test
 	void listsPublishedAndClosedEventsPubliclyButNeverDrafts() throws Exception {
 		var organizer = TestUser.random("Organizer");
-		String draftId = harness.createDraftEvent(organizer, "Secret Draft");
-		String activeId = harness.createDraftEvent(organizer, "Live Rust Conf");
-		String closedId = harness.createDraftEvent(organizer, "Past Kernel Summit");
+		String tag = UUID.randomUUID().toString().substring(0, 8);
+		String draftId = harness.createDraftEvent(organizer, "Secret Draft " + tag);
+		String activeId = harness.createDraftEvent(organizer, "Live Rust Conf " + tag);
+		String closedId = harness.createDraftEvent(organizer, "Past Kernel Summit " + tag);
 
 		harness.createTier(organizer, activeId, "General", 1000, 10);
-		harness.createTier(organizer, closedId, "Closeable General", 1000, 10);
+		harness.createTier(organizer, closedId, "General", 1000, 10);
 		mvc.perform(post("/events/{id}/publish", activeId)
 				.with(organizer.jwtPostProcessor()))
 			.andExpect(status().isOk())
@@ -234,7 +235,8 @@ class EventTest extends IntegrationTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.status").value("CLOSED"));
 
-		mvc.perform(get("/events/published"))
+		mvc.perform(get("/events/published")
+				.param("q", tag))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.items[*].id", hasItem(activeId)))
 			.andExpect(jsonPath("$.items[*].id", hasItem(closedId)))

@@ -4,6 +4,7 @@ import eventuas.errors.AppException;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -22,6 +23,8 @@ public record Event(
 	Instant createdAt,
 	Instant updatedAt
 ) {
+	public static final Duration DEFAULT_CHECK_IN_GRACE = Duration.ofHours(6);
+
 	public enum Status {
 		DRAFT,
 		ACTIVE,
@@ -94,7 +97,7 @@ public record Event(
 
 	public void ensureOpenForSales(Instant now) {
 		if (this.status != Status.ACTIVE) {
-			throw new AppException.EventNotActive();
+			throw new AppException.EventNotActive("ticket sales");
 		}
 		if ((salesStartDate != null && now.isBefore(salesStartDate))
 			|| (salesEndDate != null && now.isAfter(salesEndDate))) {
@@ -102,9 +105,16 @@ public record Event(
 		}
 	}
 
-	public void ensureOpenForCheckIn() {
+	public void ensureOpenForCheckIn(Instant now) {
+		ensureOpenForCheckIn(now, DEFAULT_CHECK_IN_GRACE);
+	}
+
+	public void ensureOpenForCheckIn(Instant now, Duration grace) {
 		if (this.status != Status.ACTIVE) {
-			throw new AppException.EventNotActive();
+			throw new AppException.EventNotActive("check in");
+		}
+		if (now.isAfter(this.endDate.plus(grace))) {
+			throw new AppException.CheckInWindowClosed();
 		}
 	}
 
