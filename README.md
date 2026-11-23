@@ -36,6 +36,11 @@ Eventuas is a small event-management and ticketing API built with Java and Sprin
 - A PostgreSQL instance if running the API outside Docker
 - A QR signing secret supplied as `APP_QR_SECRET`
 
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Test Client Guide](docs/TEST_CLIENT.md)
+
 ## Local development
 
 ### 1. Start PostgreSQL and Casdoor
@@ -50,16 +55,16 @@ docker compose up -d postgres casdoor
 
 The application reads its configuration from `src/main/resources/application.yaml` and environment variables. A local `development.env` file can be imported by Spring if present.
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/eventuas` | JDBC connection URL |
-| `DB_USER` | `eventuas` | Database user |
-| `DB_PASSWORD` | `eventuas` | Database password |
-| `ISSUER_URI` | `http://localhost:9090` | JWT issuer expected by the resource server |
-| `APP_QR_SECRET` | no application default | Secret used to sign QR tokens; must be configured |
-| `APP_CHECK_IN_GRACE` | `PT6H` | Check-in grace period after event end (ISO-8601 duration) |
-| `APP_CHECK_IN_RATE_LIMIT` | `60` | Check-in attempts per scanner per minute |
-| `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://localhost:5173` | Allowed browser origins |
+| Variable                   | Default                                       | Purpose                                                   |
+|----------------------------|-----------------------------------------------|-----------------------------------------------------------|
+| `DB_URL`                   | `jdbc:postgresql://localhost:5432/eventuas`   | JDBC connection URL                                       |
+| `DB_USER`                  | `eventuas`                                    | Database user                                             |
+| `DB_PASSWORD`              | `eventuas`                                    | Database password                                         |
+| `ISSUER_URI`               | `http://localhost:9090`                       | JWT issuer expected by the resource server                |
+| `APP_QR_SECRET`            | no application default                        | Secret used to sign QR tokens; must be configured         |
+| `APP_CHECK_IN_GRACE`       | `PT6H`                                        | Check-in grace period after event end (ISO-8601 duration) |
+| `APP_CHECK_IN_RATE_LIMIT`  | `60`                                          | Check-in attempts per scanner per minute                  |
+| `APP_CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://localhost:5173` | Allowed browser origins                                   |
 
 Set a sufficiently long, random `APP_QR_SECRET` before starting the API. Do not use the Compose development secret in a real deployment.
 
@@ -94,12 +99,12 @@ docker compose up --build
 The services are exposed at:
 
 
-| Service | URL |
-|---|---|
+| Service         | URL                     |
+|-----------------|-------------------------|
 | Browser console | `http://localhost:3000` |
-| API | `http://localhost:8080` |
-| Casdoor | `http://localhost:9090` |
-| PostgreSQL | `localhost:5432` |
+| API             | `http://localhost:8080` |
+| Casdoor         | `http://localhost:9090` |
+| PostgreSQL      | `localhost:5432`        |
 
 Compose configures the API with the `prod` profile, so Swagger/OpenAPI is disabled in that container. The browser client is served by Nginx and mounted read-only from `client`.
 
@@ -109,27 +114,27 @@ Compose configures the API with the `prod` profile, so Swagger/OpenAPI is disabl
 
 All protected API routes require a bearer JWT issued by the configured identity provider.
 
-| Area | Endpoint | Access |
-|---|---|---|
-| Current user | `GET /users/me` | Authenticated |
-| Create event | `POST /events` | Organizer |
-| Organizer event list | `GET /events` | Organizer |
-| Public event feed | `GET /events/published` | Public |
-| Public event detail | `GET /events/published/{eventId}` | Public |
-| Publish event | `POST /events/{eventId}/publish` | Owner |
-| Close event | `POST /events/{eventId}/close` | Owner |
-| Event statistics | `GET /events/{eventId}/stats` | Owner |
-| Create ticket tier | `POST /events/{eventId}/tiers` | Owner |
-| List owned tiers | `GET /events/{eventId}/tiers` | Owner |
-| List public tiers | `GET /events/published/{eventId}/tiers` | Public |
-| Close tier | `POST /events/{eventId}/tiers/{tierId}/close` | Owner |
-| Purchase ticket | `POST /tiers/{tierId}/buy` | Authenticated buyer |
-| Ticket wallet | `GET /tickets/me` | Authenticated buyer |
-| Ticket QR token | `GET /tickets/{ticketId}/qr` | Ticket owner |
-| Redeem QR/check-in | `POST /check-ins` | Authenticated event staff |
-| Assign staff | `POST /events/{eventId}/staff` | Event owner |
-| List staff | `GET /events/{eventId}/staff` | Event owner |
-| Revoke staff | `DELETE /events/{eventId}/staff/{staffUserId}` | Event owner |
+| Area                 | Endpoint                                       | Access                    |
+|----------------------|------------------------------------------------|---------------------------|
+| Current user         | `GET /users/me`                                | Authenticated             |
+| Create event         | `POST /events`                                 | Organizer                 |
+| Organizer event list | `GET /events`                                  | Organizer                 |
+| Public event feed    | `GET /events/published`                        | Public                    |
+| Public event detail  | `GET /events/published/{eventId}`              | Public                    |
+| Publish event        | `POST /events/{eventId}/publish`               | Owner                     |
+| Close event          | `POST /events/{eventId}/close`                 | Owner                     |
+| Event statistics     | `GET /events/{eventId}/stats`                  | Owner                     |
+| Create ticket tier   | `POST /events/{eventId}/tiers`                 | Owner                     |
+| List owned tiers     | `GET /events/{eventId}/tiers`                  | Owner                     |
+| List public tiers    | `GET /events/published/{eventId}/tiers`        | Public                    |
+| Close tier           | `POST /events/{eventId}/tiers/{tierId}/close`  | Owner                     |
+| Purchase ticket      | `POST /tiers/{tierId}/buy`                     | Authenticated buyer       |
+| Ticket wallet        | `GET /tickets/me`                              | Authenticated buyer       |
+| Ticket QR token      | `GET /tickets/{ticketId}/qr`                   | Ticket owner              |
+| Redeem QR/check-in   | `POST /check-ins`                              | Authenticated event staff |
+| Assign staff         | `POST /events/{eventId}/staff`                 | Event owner               |
+| List staff           | `GET /events/{eventId}/staff`                  | Event owner               |
+| Revoke staff         | `DELETE /events/{eventId}/staff/{staffUserId}` | Event owner               |
 
 See [`docs/TEST_CLIENT.md`](docs/TEST_CLIENT.md) for request examples, workflows, and browser-console usage. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for implementation and data design.
 
@@ -163,4 +168,6 @@ Tests cover event, tier, ticket, check-in, staff, user provisioning, pagination,
 
 ## License
 
-No license is currently specified in this repository. If you intend to publish or distribute the project, add a license file and update this section.
+This project is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Sagar Bhattacharya
