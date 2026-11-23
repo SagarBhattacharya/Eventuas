@@ -174,4 +174,13 @@ public sealed abstract class AppException extends RuntimeException {
 			);
 		}
 	}
+
+	public static final class InvalidIdempotencyKey extends AppException {
+		public InvalidIdempotencyKey(String reason) {
+			super(
+				ErrorCode.INVALID_IDEMPOTENCY_KEY,
+				"Invalid idempotency key: %s".formatted(reason)
+			);
+		}
+	}
 }

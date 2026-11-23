@@ -22,6 +22,7 @@ public class TicketService {
 	private final QrSigner qrSigner;
 	private final Clock clock;
 	private final TicketQueryRepository ticketQueryRepository;
+	private final IdempotencyRepository idempotencyRepository;
 
 	public TicketService(
 		EventRepository eventRepository,
@@ -29,7 +30,8 @@ public class TicketService {
 		TicketRepository ticketRepository,
 		QrSigner qrSigner,
 		Clock clock,
-		TicketQueryRepository ticketQueryRepository
+		TicketQueryRepository ticketQueryRepository,
+		IdempotencyRepository idempotencyRepository
 	) {
 		this.eventRepository = eventRepository;
 		this.ticketTierRepository = ticketTierRepository;
@@ -37,10 +39,24 @@ public class TicketService {
 		this.qrSigner = qrSigner;
 		this.clock = clock;
 		this.ticketQueryRepository = ticketQueryRepository;
+		this.idempotencyRepository = idempotencyRepository;
 	}
 
 	@Transactional
-	public Ticket buyTicket(UUID buyerId, UUID tierId) {
+	public Ticket buyTicket(UUID buyerId, UUID tierId, String idempotencyKey) {
+		String normalizedKey = normalizeKey(idempotencyKey);
+
+		// acquire idempotency lock
+		boolean claimed = idempotencyRepository.tryClaim(buyerId, normalizedKey, clock.instant());
+		if (!claimed) {
+			UUID existingTicketId = idempotencyRepository.findTicketId(buyerId, normalizedKey)
+				.orElseThrow(() -> new IllegalStateException("Idempotency key claimed without bound ticket"));
+
+			return ticketRepository.findById(existingTicketId)
+				.orElseThrow(AppException.TicketNotFound::new);
+		}
+
+		// execute purchase
 		var tier = ticketTierRepository.findById(tierId)
 			.orElseThrow(AppException.TierNotFound::new);
 		tier.ensurePurchasable();
@@ -56,7 +72,11 @@ public class TicketService {
 			throw new AppException.TierSoldOut();
 		}
 
-		return ticketRepository.save(Ticket.issue(buyerId, tierId, now));
+		var ticket = ticketRepository.save(Ticket.issue(buyerId, tierId, now));
+
+		// bind ticket to idempotency table
+		idempotencyRepository.bindTicket(buyerId, normalizedKey, ticket.id());
+		return ticket;
 	}
 
 	@Transactional(readOnly = true)
@@ -75,5 +95,16 @@ public class TicketService {
 
 		ticket.ensureOwnedBy(buyerId);
 		return qrSigner.sign(ticket.id());
+	}
+
+	private static String normalizeKey(String rawKey) {
+		if (rawKey == null || rawKey.isBlank()) {
+			throw new AppException.InvalidIdempotencyKey("key is blank");
+		}
+		String trimmed = rawKey.trim();
+		if (trimmed.length() > 128) {
+			throw new AppException.InvalidIdempotencyKey("exceeds 128 characters");
+		}
+		return trimmed;
 	}
 }

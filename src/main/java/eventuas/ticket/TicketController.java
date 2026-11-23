@@ -5,11 +5,7 @@ import eventuas.pagination.PagedResponse;
 import eventuas.user.CurrentUser;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,13 +21,12 @@ public class TicketController {
 
 	@PostMapping("/tiers/{tierId}/buy")
 	@ResponseStatus(HttpStatus.CREATED)
-	public TicketDto.Response buy(
-		@CurrentUser UUID userId,
-		@PathVariable UUID tierId
+	public TicketDto.Response buyTicket(
+		@CurrentUser UUID buyerId,
+		@PathVariable UUID tierId,
+		@RequestHeader(value = "Idempotency-Key") String idempotencyKey
 	) {
-		return TicketDto.Response.from(
-			ticketService.buyTicket(userId, tierId)
-		);
+		return TicketDto.Response.from(ticketService.buyTicket(buyerId, tierId, idempotencyKey));
 	}
 
 	@GetMapping("/tickets/me")

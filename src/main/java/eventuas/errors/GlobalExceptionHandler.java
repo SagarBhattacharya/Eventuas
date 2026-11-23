@@ -40,6 +40,7 @@ public class GlobalExceptionHandler {
 					 AppException.SalesNotOpen _ -> HttpStatus.CONFLICT;
 			case AppException.InvalidQrToken _,
 					 AppException.InvalidSalesWindow _,
+					 AppException.InvalidIdempotencyKey _,
 					 AppException.InvalidEventWindow _ -> HttpStatus.BAD_REQUEST;
 			case AppException.RateLimitExceeded _ -> HttpStatus.TOO_MANY_REQUESTS;
 		};

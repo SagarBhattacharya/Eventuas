@@ -11,6 +11,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -38,15 +39,17 @@ class TicketTest extends IntegrationTest {
 		String draftTierId = harness.createTier(organizer, draftEventId, "Early", 1000, 5);
 
 		mvc.perform(post("/tiers/{tierId}/buy", draftTierId)
-				.with(buyer.jwtPostProcessor()))
-			.andExpect(status().isConflict());
+				.with(buyer.jwtPostProcessor())
+				.header("Idempotency-Key", UUID.randomUUID().toString())
+			).andExpect(status().isConflict());
 
 		harness.publishEvent(organizer, draftEventId);
 		harness.closeEvent(organizer, draftEventId);
 
 		mvc.perform(post("/tiers/{tierId}/buy", draftTierId)
-				.with(buyer.jwtPostProcessor()))
-			.andExpect(status().isConflict());
+				.with(buyer.jwtPostProcessor())
+				.header("Idempotency-Key", UUID.randomUUID().toString())
+			).andExpect(status().isConflict());
 	}
 
 	@Test
@@ -61,14 +64,16 @@ class TicketTest extends IntegrationTest {
 		harness.closeTier(organizer, eventId, closedTierId);
 
 		mvc.perform(post("/tiers/{tierId}/buy", closedTierId)
-				.with(buyer.jwtPostProcessor()))
-			.andExpect(status().isConflict());
+				.with(buyer.jwtPostProcessor())
+				.header("Idempotency-Key", UUID.randomUUID().toString())
+			).andExpect(status().isConflict());
 
 		harness.buyTicket(buyer, singleSeatTierId);
 
 		mvc.perform(post("/tiers/{tierId}/buy", singleSeatTierId)
-				.with(buyer.jwtPostProcessor()))
-			.andExpect(status().isConflict());
+				.with(buyer.jwtPostProcessor())
+				.header("Idempotency-Key", UUID.randomUUID().toString())
+			).andExpect(status().isConflict());
 	}
 
 	@Test
@@ -88,7 +93,8 @@ class TicketTest extends IntegrationTest {
 				ready.countDown();
 				startGate.await();
 				return mvc.perform(post("/tiers/{tierId}/buy", tierId)
-						.with(buyer.jwtPostProcessor()))
+						.with(buyer.jwtPostProcessor())
+						.header("Idempotency-Key", UUID.randomUUID().toString()))
 					.andReturn()
 					.getResponse()
 					.getStatus();
@@ -150,7 +156,8 @@ class TicketTest extends IntegrationTest {
 		harness.publishEvent(organizer, upcomingEventId);
 
 		mvc.perform(post("/tiers/{tierId}/buy", upcomingTierId)
-				.with(buyer.jwtPostProcessor()))
+				.with(buyer.jwtPostProcessor())
+				.header("Idempotency-Key", UUID.randomUUID().toString()))
 			.andExpect(status().isConflict());
 
 		// 2. Sales window has already ended
@@ -174,7 +181,8 @@ class TicketTest extends IntegrationTest {
 		harness.publishEvent(organizer, expiredEventId);
 
 		mvc.perform(post("/tiers/{tierId}/buy", expiredTierId)
-				.with(buyer.jwtPostProcessor()))
+				.with(buyer.jwtPostProcessor())
+				.header("Idempotency-Key", UUID.randomUUID().toString()))
 			.andExpect(status().isConflict());
 	}
 
@@ -247,5 +255,50 @@ class TicketTest extends IntegrationTest {
 			.andExpect(jsonPath("$.totalElements").value(1))
 			.andExpect(jsonPath("$.items[0].ticketId").value(unusedTicket))
 			.andExpect(jsonPath("$.items[0].checkedIn").value(false));
+	}
+
+	@Test
+	void rejectsPurchaseWithoutIdempotencyKey() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		var buyer = TestUser.random("Buyer");
+
+		String eventId = harness.createPublishedEvent(organizer, "Header Required Conf");
+		String tierId = harness.createTier(organizer, eventId, "General", 1500, 10);
+
+		mvc.perform(post("/tiers/{tierId}/buy", tierId)
+				.with(buyer.jwtPostProcessor()))
+			.andExpect(status().isBadRequest());
+
+		mvc.perform(post("/tiers/{tierId}/buy", tierId)
+				.with(buyer.jwtPostProcessor())
+				.header("Idempotency-Key", "   "))
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void idempotencyKeyDeduplicatesRepeatPurchasesPerUser() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		var buyerA = TestUser.random("BuyerA");
+		var buyerB = TestUser.random("BuyerB");
+
+		String eventId = harness.createPublishedEvent(organizer, "Idempotent Conf");
+		String tierId = harness.createTier(organizer, eventId, "General", 1500, 10);
+		String sharedKey = "idem-" + UUID.randomUUID();
+
+		String firstTicketId = harness.buyTicket(buyerA, tierId, sharedKey);
+		String retryTicketId = harness.buyTicket(buyerA, tierId, sharedKey);
+
+		assertThat(retryTicketId).isEqualTo(firstTicketId);
+
+		Long remainingAfterRetry = jdbcTemplate.queryForObject(
+			"SELECT available_qty FROM ticket_tiers WHERE id = ?::uuid",
+			Long.class,
+			tierId
+		);
+		assertThat(remainingAfterRetry).isEqualTo(9L);
+
+		// Same key string for a different buyer is isolated per user
+		String buyerBTicketId = harness.buyTicket(buyerB, tierId, sharedKey);
+		assertThat(buyerBTicketId).isNotEqualTo(firstTicketId);
 	}
 }

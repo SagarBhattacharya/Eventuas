@@ -8,6 +8,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -103,8 +104,13 @@ public final class TestHarness {
 	}
 
 	public String buyTicket(TestUser buyer, String tierId) throws Exception {
+		return buyTicket(buyer, tierId, UUID.randomUUID().toString());
+	}
+
+	public String buyTicket(TestUser buyer, String tierId, String idempotencyKey) throws Exception {
 		String response = mvc.perform(post("/tiers/{tierId}/buy", tierId)
-				.with(buyer.jwtPostProcessor()))
+				.with(buyer.jwtPostProcessor())
+				.header("Idempotency-Key", idempotencyKey))
 			.andExpect(status().isCreated())
 			.andReturn()
 			.getResponse()
