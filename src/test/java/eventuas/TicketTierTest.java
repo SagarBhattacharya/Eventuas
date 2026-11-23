@@ -51,7 +51,8 @@ class TicketTierTest extends IntegrationTest {
 				"price", 6000,
 				"currency", "INR"
 			), eventId)
-			.andExpect(status().isConflict());
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("DUPLICATE_TIER_NAME"));
 	}
 
 	@Test

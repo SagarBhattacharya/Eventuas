@@ -164,4 +164,14 @@ public sealed abstract class AppException extends RuntimeException {
 			);
 		}
 	}
+
+	public static final class DuplicateTierName extends AppException {
+		public DuplicateTierName(String tierName) {
+			super(
+				ErrorCode.DUPLICATE_TIER_NAME,
+				"An active ticket tier named '%s' already exists for this event."
+					.formatted(tierName)
+			);
+		}
+	}
 }

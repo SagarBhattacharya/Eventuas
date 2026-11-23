@@ -4,6 +4,7 @@ import eventuas.errors.AppException;
 import eventuas.event.Event;
 import eventuas.event.EventAccess;
 import eventuas.event.EventRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,7 +54,12 @@ public class TicketTierService {
 			eventId,
 			clock.instant()
 		);
-		return ticketTierRepository.save(ticketTier);
+
+		try {
+			return ticketTierRepository.save(ticketTier);
+		} catch (DataIntegrityViolationException _) {
+			throw new AppException.DuplicateTierName(tier);
+		}
 	}
 
 	public List<TicketTier> listByOwnedEvent(UUID organizerId, UUID eventId) {
