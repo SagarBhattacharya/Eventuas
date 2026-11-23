@@ -16,12 +16,20 @@ import java.util.UUID;
 public class QrSigner {
 
 	private static final String HMAC_ALG = "HmacSHA256";
+	private static final int MIN_SECRET_BYTES = 32;
 	private final SecretKeySpec keySpec;
 
 	public QrSigner(@Value("${app.qr.secret}") String secret) {
 		if (secret == null || secret.isBlank()) {
 			throw new IllegalArgumentException("app.qr.secret must not be blank");
 		}
+		byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+		if (keyBytes.length < MIN_SECRET_BYTES) {
+			throw new IllegalArgumentException(
+				"app.qr.secret must be at least " + MIN_SECRET_BYTES + " UTF-8 bytes"
+			);
+		}
+
 		this.keySpec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_ALG);
 	}
 

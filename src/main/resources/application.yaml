@@ -23,4 +23,4 @@ spring:
 
 app:
   qr:
-    secret: ${APP_QR_SECRET:dev-only-insecure-secret-change-in-prod-32b}
+    secret: ${APP_QR_SECRET}
