@@ -37,7 +37,7 @@ management:
 
 logging:
   pattern:
-    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId:-system}] %logger{36} - %msg%n"
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId:-system}] %logger{36} - %msg %kvp%n"
 
 app:
   qr:

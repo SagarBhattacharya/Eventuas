@@ -1,0 +1,64 @@
+{
+  "organizations": [
+    {
+      "owner": "admin",
+      "name": "eventuas",
+      "displayName": "Eventuas",
+      "websiteUrl": "http://localhost:3000",
+      "passwordType": "plain",
+      "initScore": 2000,
+      "languages": ["en"]
+    }
+  ],
+  "applications": [
+    {
+      "owner": "admin",
+      "name": "eventuas_application",
+      "displayName": "Eventuas App",
+      "homepageUrl": "http://localhost:3000",
+      "organization": "eventuas",
+      "clientId": "eventuas-client-id",
+      "clientSecret": "eventuas-client-secret",
+      "redirectUris": ["http://localhost:3000/"],
+      "tokenFormat": "JWT",
+      "expireInHours": 168,
+      "enablePassword": true,
+      "enableSignUp": true,
+      "grantTypes": ["authorization_code", "password", "refresh_token"],
+      "signupItems": [
+        { "name": "ID", "visible": false, "required": true, "rule": "Random" },
+        { "name": "Username", "visible": true, "required": true, "rule": "None" },
+        { "name": "Display name", "visible": true, "required": true, "rule": "None" },
+        { "name": "Password", "visible": true, "required": true, "rule": "None" },
+        { "name": "Confirm password", "visible": true, "required": true, "rule": "None" },
+        { "name": "Email", "visible": true, "required": true, "rule": "None" }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "owner": "eventuas",
+      "name": "aarav",
+      "displayName": "Aarav (Organizer)",
+      "password": "123",
+      "email": "aarav@eventuas.local",
+      "signupApplication": "eventuas_application"
+    },
+    {
+      "owner": "eventuas",
+      "name": "meera",
+      "displayName": "Meera (Buyer)",
+      "password": "123",
+      "email": "meera@eventuas.local",
+      "signupApplication": "eventuas_application"
+    },
+    {
+      "owner": "eventuas",
+      "name": "rohan",
+      "displayName": "Rohan (Scanner)",
+      "password": "123",
+      "email": "rohan@eventuas.local",
+      "signupApplication": "eventuas_application"
+    }
+  ]
+}

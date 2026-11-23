@@ -29,10 +29,19 @@ services:
       - "9090:8000"
     volumes:
       - ./deploy/casdoor.conf:/conf/app.conf:ro
+      - ./deploy/init_data.json:/init_data.json:ro
     deploy:
       resources:
         limits:
           memory: 384M
+
+  client:
+    image: nginx:alpine
+    container_name: eventuas-client
+    ports:
+      - "3000:80"
+    volumes:
+      - ./client:/usr/share/nginx/html:ro
 
 volumes:
   postgres_data:
