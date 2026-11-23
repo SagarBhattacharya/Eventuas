@@ -76,6 +76,8 @@ class EventTest extends IntegrationTest {
 		String draftId = harness.createDraftEvent(organizer, "Secret Draft");
 		String activeId = harness.createDraftEvent(organizer, "Live Rust Conf");
 		String closedId = harness.createDraftEvent(organizer, "Past Kernel Summit");
+		harness.createTier(organizer, activeId, "General", 1000, 10);
+		harness.createTier(organizer, closedId, "General Closeable", 1000, 10);
 
 		mvc.perform(post("/events/{id}/publish", activeId)
 				.with(organizer.jwtPostProcessor()))
@@ -145,9 +147,10 @@ class EventTest extends IntegrationTest {
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
 
-		String eventId = harness.createPublishedEvent(organizer, "Distributed Systems Conf");
+		String eventId = harness.createDraftEvent(organizer, "Distributed Systems Conf");
 		String activeTierId = harness.createTier(organizer, eventId, "Early Bird", 1500, 50);
 		String closedTierId = harness.createTier(organizer, eventId, "VIP", 5000, 10);
+		harness.publishEvent(organizer, eventId);
 
 		mvc.perform(post("/events/{eventId}/tiers/{tierId}/close", eventId, closedTierId)
 				.with(organizer.jwtPostProcessor()))
@@ -184,9 +187,10 @@ class EventTest extends IntegrationTest {
 	void returnsEventStatsWithTierBreakdownForOrganizer() throws Exception {
 		var organizer = TestUser.random("Organizer");
 		var buyer = TestUser.random("Buyer");
-		String eventId = harness.createPublishedEvent(organizer, "Kernel Internals Summit");
+		String eventId = harness.createDraftEvent(organizer, "Kernel Internals Summit");
 		String gaTierId = harness.createTier(organizer, eventId, "GA", 1000, 10);
 		String vipTierId = harness.createTier(organizer, eventId, "VIP", 2500, 5);
+		harness.publishEvent(organizer, eventId);
 
 		// Buy 2 GA tickets and check in 1 of them
 		String ticket1 = harness.buyTicket(buyer, gaTierId);
@@ -224,5 +228,33 @@ class EventTest extends IntegrationTest {
 				.with(outsider.jwtPostProcessor()))
 			.andExpect(status().isForbidden())
 			.andExpect(jsonPath("$.code").value("EVENT_NOT_AUTHORIZED"));
+	}
+
+	@Test
+	void rejectsPublishingEventWithNoActiveTiers() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		String eventId = harness.createDraftEvent(organizer, "Empty Tier Event");
+
+		// Draft with 0 tiers -> 409 Conflict
+		mvc.perform(post("/events/{id}/publish", eventId)
+				.with(organizer.jwtPostProcessor()))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("EVENT_HAS_NO_ACTIVE_TIERS"));
+
+		// Draft with only CLOSED tiers -> still 409 Conflict
+		String tierId = harness.createTier(organizer, eventId, "Early Bird", 1000, 10);
+		harness.closeTier(organizer, eventId, tierId);
+
+		mvc.perform(post("/events/{id}/publish", eventId)
+				.with(organizer.jwtPostProcessor()))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("EVENT_HAS_NO_ACTIVE_TIERS"));
+
+		// Adding an active tier allows publishing
+		harness.createTier(organizer, eventId, "General", 1500, 20);
+		mvc.perform(post("/events/{id}/publish", eventId)
+				.with(organizer.jwtPostProcessor()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("ACTIVE"));
 	}
 }

@@ -63,4 +63,7 @@ public interface TicketTierRepository extends CrudRepository<TicketTier, UUID> {
 	ORDER BY tt.created_at
 	""")
 	List<EventDto.TierStats> findStatsByEventId(UUID eventId);
+
+	@Query("SELECT COUNT(*) FROM ticket_tiers WHERE event_id = :eventId AND status = 'ACTIVE'")
+	long countActiveByEventId(UUID eventId);
 }

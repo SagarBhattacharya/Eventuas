@@ -168,8 +168,8 @@ class TicketTest extends IntegrationTest {
 
 		String upcomingEventId = new tools.jackson.databind.ObjectMapper()
 			.readTree(upcomingResp).get("id").asString();
-		harness.publishEvent(organizer, upcomingEventId);
 		String upcomingTierId = harness.createTier(organizer, upcomingEventId, "Early", 1000, 10);
+		harness.publishEvent(organizer, upcomingEventId);
 
 		mvc.perform(post("/tiers/{tierId}/buy", upcomingTierId)
 				.with(buyer.jwtPostProcessor()))
@@ -192,8 +192,8 @@ class TicketTest extends IntegrationTest {
 
 		String expiredEventId = new tools.jackson.databind.ObjectMapper()
 			.readTree(expiredResp).get("id").asString();
-		harness.publishEvent(organizer, expiredEventId);
 		String expiredTierId = harness.createTier(organizer, expiredEventId, "Standard", 1500, 10);
+		harness.publishEvent(organizer, expiredEventId);
 
 		mvc.perform(post("/tiers/{tierId}/buy", expiredTierId)
 				.with(buyer.jwtPostProcessor()))

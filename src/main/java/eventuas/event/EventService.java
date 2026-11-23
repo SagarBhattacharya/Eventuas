@@ -78,7 +78,8 @@ public class EventService {
 	@Transactional
 	public Event publish(UUID organizerId, UUID eventId) {
 		var event = eventAccess.requireOwned(organizerId, eventId, "publish");
-		return eventRepository.save(event.publish(clock.instant()));
+		long activeTiers = ticketTierRepository.countActiveByEventId(eventId);
+		return eventRepository.save(event.publish(activeTiers, clock.instant()));
 	}
 
 	@Transactional

@@ -58,6 +58,7 @@ public final class TestHarness {
 
 	public String createPublishedEvent(TestUser organizer, String name) throws Exception {
 		String eventId = createDraftEvent(organizer, name);
+		createTier(organizer, eventId, "Default", 1000, 100);
 		publishEvent(organizer, eventId);
 		return eventId;
 	}

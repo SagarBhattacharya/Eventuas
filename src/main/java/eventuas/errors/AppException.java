@@ -137,4 +137,13 @@ public sealed abstract class AppException extends RuntimeException {
 			);
 		}
 	}
+
+	public static final class EventHasNoActiveTiers extends AppException {
+		public EventHasNoActiveTiers() {
+			super(
+				ErrorCode.EVENT_HAS_NO_ACTIVE_TIERS,
+				"Event must have at least one active ticket tier before publishing."
+			);
+		}
+	}
 }

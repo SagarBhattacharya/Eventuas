@@ -63,9 +63,12 @@ public record Event(
 		);
 	}
 
-	public Event publish(Instant now) {
+	public Event publish(long activeTierCount, Instant now) {
 		if (this.status != Status.DRAFT) {
 			throw new AppException.EventNotPublishable(this.status.name());
+		}
+		if (activeTierCount < 1) {
+			throw new AppException.EventHasNoActiveTiers();
 		}
 		return withStatus(Status.ACTIVE, now);
 	}

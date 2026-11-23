@@ -28,6 +28,7 @@ public class GlobalExceptionHandler {
 					 AppException.EventNotActive _,
 					 AppException.TierSoldOut _,
 					 AppException.StaffAlreadyAssigned _,
+					 AppException.EventHasNoActiveTiers _,
 					 AppException.TicketAlreadyCheckedIn _,
 					 AppException.SalesNotOpen _ -> HttpStatus.CONFLICT;
 			case AppException.InvalidQrToken _,
