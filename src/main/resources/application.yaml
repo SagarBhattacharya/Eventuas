@@ -2,6 +2,10 @@ spring:
   application:
     name: eventuas
 
+  threads:
+    virtual:
+      enabled: true
+
   config:
     import:
       - optional:file:./development.env[.properties]
