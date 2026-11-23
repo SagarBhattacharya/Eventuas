@@ -35,6 +35,7 @@ public class GlobalExceptionHandler {
 			case AppException.InvalidQrToken _,
 					 AppException.InvalidSalesWindow _,
 					 AppException.InvalidEventWindow _ -> HttpStatus.BAD_REQUEST;
+			case AppException.RateLimitExceeded _ -> HttpStatus.TOO_MANY_REQUESTS;
 		};
 		return problem(status, ex.code(), ex.getMessage());
 	}

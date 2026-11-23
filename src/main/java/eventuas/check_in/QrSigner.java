@@ -12,6 +12,14 @@ import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.UUID;
 
+/**
+ * Signs and verifies ticket QR payloads using HMAC-SHA256 ({@code <ticketId>.<signature>}).
+ *
+ * <p>Tokens intentionally omit an embedded timestamp because replay and temporal validity are
+ * enforced authoritatively at scan time: {@code check_ins} enforces single-use redemption via a
+ * unique constraint on {@code ticket_id}, and {@code Event.ensureOpenForCheckIn} rejects scans
+ * once the event is closed or past {@code endDate + app.check-in.grace}.
+ */
 @Component
 public class QrSigner {
 

@@ -12,9 +12,14 @@ import java.util.UUID;
 public class CheckInController {
 
 	private final CheckInService checkInService;
+	private final CheckInRateLimiter rateLimiter;
 
-	public CheckInController(CheckInService checkInService) {
+	public CheckInController(
+		CheckInService checkInService,
+		CheckInRateLimiter rateLimiter
+	) {
 		this.checkInService = checkInService;
+		this.rateLimiter = rateLimiter;
 	}
 
 	@PostMapping
@@ -23,8 +28,7 @@ public class CheckInController {
 		@CurrentUser UUID scannerId,
 		@Valid @RequestBody CheckInDto.Request request
 	) {
-		return CheckInDto.Response.from(
-			checkInService.checkIn(scannerId, request.qrToken())
-		);
+		rateLimiter.acquire(scannerId);
+		return CheckInDto.Response.from(checkInService.checkIn(scannerId, request.qrToken()));
 	}
 }

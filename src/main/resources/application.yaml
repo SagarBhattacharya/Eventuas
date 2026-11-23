@@ -26,3 +26,4 @@ app:
     secret: ${APP_QR_SECRET}
   check-in:
     grace: ${APP_CHECK_IN_GRACE:PT6H}
+    rate-limit-per-minute: ${APP_CHECK_IN_RATE_LIMIT:60}

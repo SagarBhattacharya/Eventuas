@@ -155,4 +155,13 @@ public sealed abstract class AppException extends RuntimeException {
 			);
 		}
 	}
+
+	public static final class RateLimitExceeded extends AppException {
+		public RateLimitExceeded() {
+			super(
+				ErrorCode.RATE_LIMIT_EXCEEDED,
+				"Too many check-in attempts. Please slow down."
+			);
+		}
+	}
 }
