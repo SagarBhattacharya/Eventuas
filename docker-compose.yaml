@@ -30,14 +30,44 @@ services:
     volumes:
       - ./deploy/casdoor.conf:/conf/app.conf:ro
       - ./deploy/init_data.json:/init_data.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/api/health || curl -sf http://localhost:8000/api/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     deploy:
       resources:
         limits:
           memory: 384M
 
+  eventuas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eventuas-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      casdoor:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/eventuas
+      DB_USER: eventuas
+      DB_PASSWORD: eventuas
+      ISSUER_URI: http://localhost:9090
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://casdoor:8000/.well-known/jwks
+      APP_QR_SECRET: ${APP_QR_SECRET:-change-me-local-dev-secret-key-32bytes}
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:3000
+
   client:
     image: nginx:alpine
     container_name: eventuas-client
+    depends_on:
+      - eventuas
+      - casdoor
     ports:
       - "3000:80"
     volumes:

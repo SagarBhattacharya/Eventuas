@@ -61,7 +61,10 @@ const actions = {
   logout({ actor }) { logout(actor); },
   async loginAll() { for (const a of Object.keys(ACTORS)) { await loginWithPassword(a, ACTORS[a].user, ACTORS[a].pass); } await afterLogin(); },
   tab({ tab }) { S.tab = tab; if (tab === "buyer") return Promise.all([loadFeed(), loadWallet()]); if (tab === "organizer") return loadMine(); },
-  async refresh() { await Promise.all([loadMine(), loadFeed(), loadWallet()]); },
+  async refresh() {
+    S.health = await health();
+    await Promise.all([loadMine(), loadFeed(), loadWallet()]);
+  },
 
   async createEvent() {
     const f = S.form;
