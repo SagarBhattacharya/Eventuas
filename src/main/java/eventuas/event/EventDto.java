@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.List;
@@ -18,12 +19,15 @@ public final class EventDto {
 	@Schema(name = "CreateEventRequest")
 	public record CreateRequest(
 		@NotBlank(message = "Event name is required")
+		@Size(max = 200, message = "Event name must not exceed 200 characters")
 		String name,
 
 		@NotBlank(message = "Event description is required")
+		@Size(max = 5000, message = "Event description must not exceed 5000 characters")
 		String description,
 
 		@NotBlank(message = "Venue is required")
+		@Size(max = 300, message = "Event venue must not exceed 300 characters")
 		String venue,
 
 		@NotNull(message = "Start date is required")

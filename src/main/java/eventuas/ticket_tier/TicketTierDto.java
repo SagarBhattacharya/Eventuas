@@ -1,11 +1,7 @@
 package eventuas.ticket_tier;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.*;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -17,19 +13,24 @@ public final class TicketTierDto {
 	@Schema(name = "CreateTicketTierRequest")
 	public record CreateRequest(
 		@NotBlank(message = "Tier name is required")
+		@Size(max = 100, message = "Tier name must not exceed 100 characters")
 		String tier,
 
 		@NotNull(message = "Description is required")
+		@Size(max = 1000, message = "Description must not exceed 1000 characters")
 		String description,
 
 		@Positive(message = "Available quantity must be greater than zero")
+		@Max(value = 1_000_000, message = "Available quantity cannot exceed 1M")
 		long availableQty,
 
-		@Min(value = 0, message = "Price cannot be negative")
+		@PositiveOrZero(message = "Price cannot be negative")
+		@Max(value = 100_000_000, message = "Price cannot exceed 100M units")
 		long price,
 
 		@NotBlank(message = "Currency is required")
-		@Pattern(regexp = "^[A-Z]{3}$", message = "Currency must be a 3-letter uppercase ISO code")
+		@Size(min = 3, max = 3, message = "Currency must be exactly 3 characters")
+		@ValidCurrency
 		String currency
 	) {}
 

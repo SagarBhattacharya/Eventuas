@@ -98,4 +98,14 @@ class EventStaffTest extends IntegrationTest {
 				.with(intruder.jwtPostProcessor()))
 			.andExpect(status().isForbidden());
 	}
+
+	@Test
+	void rejectsMalformedStaffEmail() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		String eventId = harness.createDraftEvent(organizer, "Email Validation Conf");
+
+		harness.postJson("/events/{eventId}/staff", organizer, Map.of("email", "not-an-email"), eventId)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+	}
 }

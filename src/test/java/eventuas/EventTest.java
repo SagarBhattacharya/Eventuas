@@ -346,4 +346,20 @@ class EventTest extends IntegrationTest {
 			.andExpect(jsonPath("$.items[*].id", not(hasItem(activeId1))))
 			.andExpect(jsonPath("$.items[*].id", not(hasItem(activeId2))));
 	}
+
+	@Test
+	void rejectsOversizedEventFields() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		Instant start = Instant.now().plus(5, ChronoUnit.DAYS);
+
+		harness.postJson("/events", organizer, Map.of(
+				"name", "x".repeat(201),
+				"description", "Valid description",
+				"venue", "Main Hall",
+				"startDate", start.toString(),
+				"endDate", start.plus(2, ChronoUnit.HOURS).toString()
+			))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+	}
 }

@@ -112,4 +112,30 @@ class TicketTierTest extends IntegrationTest {
 			), eventId)
 			.andExpect(status().isForbidden());
 	}
+
+	@Test
+	void rejectsInvalidCurrencyOrOutOfBoundsTierValues() throws Exception {
+		var organizer = TestUser.random("Organizer");
+		String eventId = harness.createDraftEvent(organizer, "Validation Conf");
+
+		harness.postJson("/events/{eventId}/tiers", organizer, Map.of(
+				"tier", "VIP",
+				"description", "VIP pass",
+				"availableQty", 10,
+				"price", 1000,
+				"currency", "ZZZ"
+			), eventId)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+		harness.postJson("/events/{eventId}/tiers", organizer, Map.of(
+				"tier", "VIP",
+				"description", "VIP pass",
+				"availableQty", -1,
+				"price", 1000,
+				"currency", "INR"
+			), eventId)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+	}
 }
