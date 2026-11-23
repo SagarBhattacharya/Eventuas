@@ -34,6 +34,11 @@ public interface TicketTierRepository extends CrudRepository<TicketTier, UUID> {
 		""")
 	int decrementStock(UUID tierId);
 
+	/**
+	 * Atomically transitions all ACTIVE tiers for an event to CLOSED using database {@code now()}.
+	 * Intentionally bypasses the immutable entity {@code save()} path to avoid N+1 round-trips
+	 * when closing an event with multiple tiers.
+	 */
 	@Modifying
 	@Query("""
 		UPDATE ticket_tiers SET
