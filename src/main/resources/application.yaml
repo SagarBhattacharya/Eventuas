@@ -21,9 +21,21 @@ spring:
         jwt:
           issuer-uri: ${ISSUER_URI:http://localhost:9090}
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
 app:
   qr:
     secret: ${APP_QR_SECRET}
   check-in:
     grace: ${APP_CHECK_IN_GRACE:PT6H}
     rate-limit-per-minute: ${APP_CHECK_IN_RATE_LIMIT:60}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
