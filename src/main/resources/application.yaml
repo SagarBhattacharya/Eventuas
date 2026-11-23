@@ -35,6 +35,10 @@ management:
       probes:
         enabled: true
 
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%X{requestId:-system}] %logger{36} - %msg%n"
+
 app:
   qr:
     secret: ${APP_QR_SECRET}

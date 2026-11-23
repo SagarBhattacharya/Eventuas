@@ -6,6 +6,8 @@ import eventuas.event.EventRepository;
 import eventuas.pagination.PageQuery;
 import eventuas.pagination.PagedResponse;
 import eventuas.ticket_tier.TicketTierRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +18,7 @@ import java.util.UUID;
 @Service
 public class TicketService {
 
+	private static final Logger log = LoggerFactory.getLogger(TicketService.class);
 	private final EventRepository eventRepository;
 	private final TicketTierRepository ticketTierRepository;
 	private final TicketRepository ticketRepository;
@@ -52,8 +55,16 @@ public class TicketService {
 			UUID existingTicketId = idempotencyRepository.findTicketId(buyerId, normalizedKey)
 				.orElseThrow(() -> new IllegalStateException("Idempotency key claimed without bound ticket"));
 
-			return ticketRepository.findById(existingTicketId)
+			var ticket = ticketRepository.findById(existingTicketId)
 				.orElseThrow(AppException.TicketNotFound::new);
+
+			log.atInfo()
+				.setMessage("ticket.purchase.replayed")
+				.addKeyValue("ticketId", existingTicketId)
+				.addKeyValue("buyerId", buyerId)
+				.log();
+
+			return ticket;
 		}
 
 		// execute purchase
@@ -76,6 +87,14 @@ public class TicketService {
 
 		// bind ticket to idempotency table
 		idempotencyRepository.bindTicket(buyerId, normalizedKey, ticket.id());
+
+		log.atInfo()
+			.setMessage("ticket.purchased")
+			.addKeyValue("ticketId", ticket.id())
+			.addKeyValue("tierId", tierId)
+			.addKeyValue("buyerId", buyerId)
+			.log();
+
 		return ticket;
 	}
 

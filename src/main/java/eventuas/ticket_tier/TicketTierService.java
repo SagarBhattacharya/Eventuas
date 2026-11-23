@@ -4,6 +4,8 @@ import eventuas.errors.AppException;
 import eventuas.event.Event;
 import eventuas.event.EventAccess;
 import eventuas.event.EventRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +17,7 @@ import java.util.UUID;
 @Service
 public class TicketTierService {
 
+	private static final Logger log = LoggerFactory.getLogger(TicketTierService.class);
 	private final EventRepository eventRepository;
 	private final EventAccess eventAccess;
 	private final TicketTierRepository ticketTierRepository;
@@ -56,7 +59,15 @@ public class TicketTierService {
 		);
 
 		try {
-			return ticketTierRepository.save(ticketTier);
+			var savedTier = ticketTierRepository.save(ticketTier);
+
+			log.atInfo()
+				.setMessage("ticket.tier.activated")
+				.addKeyValue("eventId", event.id())
+				.addKeyValue("tierId", savedTier.id())
+				.log();
+
+			return savedTier;
 		} catch (DataIntegrityViolationException _) {
 			throw new AppException.DuplicateTierName(tier);
 		}
@@ -69,11 +80,19 @@ public class TicketTierService {
 
 	@Transactional
 	public TicketTier closeTier(UUID organizerId, UUID eventId, UUID tierId) {
-		var _ = eventAccess.requireOwned(organizerId, eventId, "close this tier for");
+		var event = eventAccess.requireOwned(organizerId, eventId, "close this tier for");
 		var tier = ticketTierRepository.findByIdAndEventId(tierId, eventId)
 			.orElseThrow(AppException.TierNotFound::new);
 
-		return ticketTierRepository.save(tier.close(clock.instant()));
+		var closedTier = ticketTierRepository.save(tier.close(clock.instant()));
+
+		log.atInfo()
+			.setMessage("ticket.tier.closed")
+			.addKeyValue("eventId", event.id())
+			.addKeyValue("tierId", closedTier.id())
+			.log();
+
+		return closedTier;
 	}
 
 	public List<TicketTier> listPublicTiers(UUID eventId) {

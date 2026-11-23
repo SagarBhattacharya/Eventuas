@@ -4,6 +4,8 @@ import eventuas.errors.AppException;
 import eventuas.event.EventAccess;
 import eventuas.ticket.TicketRepository;
 import eventuas.ticket_tier.TicketTierRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +17,7 @@ import java.util.UUID;
 @Service
 public class CheckInService {
 
+	private static final Logger log = LoggerFactory.getLogger(CheckInService.class);
 	private final QrSigner qrSigner;
 	private final TicketRepository ticketRepository;
 	private final TicketTierRepository ticketTierRepository;
@@ -56,7 +59,17 @@ public class CheckInService {
 		);
 		event.ensureOpenForCheckIn(clock.instant(), checkInGrace);
 
-		return checkInRepository.tryCheckIn(ticketId, scannerId, clock.instant())
+		var checkIn = checkInRepository.tryCheckIn(ticketId, scannerId, clock.instant())
 			.orElseThrow(AppException.TicketAlreadyCheckedIn::new);
+
+		log.atInfo()
+			.setMessage("ticket.checked_in")
+			.addKeyValue("checkInId", checkIn.id())
+			.addKeyValue("ticketId", ticket.id())
+			.addKeyValue("eventId", event.id())
+			.addKeyValue("scannerId", scannerId)
+			.log();
+
+		return checkIn;
 	}
 }

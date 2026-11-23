@@ -36,4 +36,16 @@ class SecurityHardeningTest extends IntegrationTest {
 				.header("Access-Control-Request-Method", "GET"))
 			.andExpect(status().isForbidden());
 	}
+
+	@Test
+	void propagatesOrGeneratesRequestIdHeader() throws Exception {
+		mvc.perform(get("/actuator/health"))
+			.andExpect(status().isOk())
+			.andExpect(header().exists("X-Request-Id"));
+
+		mvc.perform(get("/actuator/health")
+				.header("X-Request-Id", "req-trace-123"))
+			.andExpect(status().isOk())
+			.andExpect(header().string("X-Request-Id", "req-trace-123"));
+	}
 }

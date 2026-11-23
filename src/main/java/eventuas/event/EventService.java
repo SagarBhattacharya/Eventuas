@@ -4,6 +4,8 @@ import eventuas.errors.AppException;
 import eventuas.pagination.PageQuery;
 import eventuas.pagination.PagedResponse;
 import eventuas.ticket_tier.TicketTierRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,7 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class EventService {
 
+	private static final Logger log = LoggerFactory.getLogger(EventService.class);
 	private final EventRepository eventRepository;
 	private final EventAccess eventAccess;
 	private final TicketTierRepository ticketTierRepository;
@@ -51,7 +54,13 @@ public class EventService {
 			startDate, endDate, salesStartDate, salesEndDate,
 			organizerId, clock.instant()
 		);
-		return eventRepository.save(event);
+		var saved = eventRepository.save(event);
+		log.atInfo()
+			.setMessage("event.drafted")
+			.addKeyValue("eventId", saved.id())
+			.addKeyValue("organizerId", organizerId)
+			.log();
+		return saved;
 	}
 
 	@Transactional(readOnly = true)
@@ -96,7 +105,15 @@ public class EventService {
 	public Event publish(UUID organizerId, UUID eventId) {
 		var event = eventAccess.requireOwned(organizerId, eventId, "publish");
 		long activeTiers = ticketTierRepository.countActiveByEventId(eventId);
-		return eventRepository.save(event.publish(activeTiers, clock.instant()));
+		var saved = eventRepository.save(event.publish(activeTiers, clock.instant()));
+
+		log.atInfo()
+			.setMessage("event.published")
+			.addKeyValue("eventId", saved.id())
+			.addKeyValue("organizerId", organizerId)
+			.log();
+
+		return saved;
 	}
 
 	@Transactional
@@ -104,6 +121,13 @@ public class EventService {
 		var event = eventAccess.requireOwned(organizerId, eventId, "close");
 		var closedEvent = eventRepository.save(event.close(clock.instant()));
 		var _ = ticketTierRepository.closeAllActiveByEventId(eventId);
+
+		log.atInfo()
+			.setMessage("event.closed")
+			.addKeyValue("eventId", closedEvent.id())
+			.addKeyValue("organizerId", organizerId)
+			.log();
+
 		return closedEvent;
 	}
 }
