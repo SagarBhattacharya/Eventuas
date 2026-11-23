@@ -6,6 +6,7 @@ import eventuas.user.User;
 import eventuas.user.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.util.UUID;
 
@@ -16,7 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 class UserProvisionTest extends IntegrationTest {
 
-	@Autowired
+	@MockitoSpyBean
 	UserRepository userRepository;
 
 	@Test
@@ -58,5 +59,30 @@ class UserProvisionTest extends IntegrationTest {
 	void rejectsUnauthenticatedRequest() throws Exception {
 		mvc.perform(get("/users/me"))
 			.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void rejectsNonUuidSubjectClaimWithUnauthorized() throws Exception {
+		mvc.perform(get("/users/me")
+				.with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt()
+					.jwt(j -> j.subject("not-a-valid-uuid").claim("name", "Bad Sub"))))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
+	}
+
+	@Test
+	void skipsRedundantUpsertWhenClaimsAreUnchangedWithinTtl() throws Exception {
+		var user = TestUser.random("CachedUser");
+
+		mvc.perform(get("/users/me").with(user.jwtPostProcessor()))
+			.andExpect(status().isOk());
+		mvc.perform(get("/users/me").with(user.jwtPostProcessor()))
+			.andExpect(status().isOk());
+
+		org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.times(1))
+			.upsert(org.mockito.ArgumentMatchers.eq(user.id()),
+				org.mockito.ArgumentMatchers.eq(user.name()),
+				org.mockito.ArgumentMatchers.eq(user.email())
+			);
 	}
 }
