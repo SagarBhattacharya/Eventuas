@@ -2,6 +2,7 @@
 
 Eventuas is a small event-management and ticketing API built with Java and Spring Boot. It supports event creation and publishing, ticket-tier management, ticket purchasing, organizer statistics, staff delegation, and QR-token-based gate check-in. A lightweight browser console is included for exercising the API without a separate frontend build.
 
+[![CI](https://github.com/SagarBhattacharya/Eventuas/actions/workflows/ci.yml/badge.svg)](https://github.com/SagarBhattacharya/Eventuas/actions/workflows/ci.yml)
 
 ## Features
 
